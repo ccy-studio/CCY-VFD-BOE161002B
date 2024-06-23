@@ -14,32 +14,37 @@
 #include "STDLIB.H"
 #include "STRING.H"
 
-// #define DEV_PLATFROM
+#define DEV_PLATFROM  // CDCÐéÄâ´®¿Ú¿ª¹Ø
 
-// #define SYS_FOSC 22118400UL  // 22.1184Mhz
+// #define SYS_FOSC 24000000UL  // 24Mhz
 
+#ifndef DEV_PLATFROM
 typedef unsigned char uint8_t;
 typedef unsigned int uint16_t;
 typedef unsigned long uint32_t;
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+#else
+#include "stc32_stc8_usb.h"
+#endif
+
 typedef uint8_t bool;
 #define false 0
 #define true 1
 
-#define I2C_SDA P16
-#define I2C_SCL P15
-#define RX8025_INT P17
-#define VFD_EN P11
-#define P_STB P14
-#define P_CLK P10
-#define P_DIN P37
+#define I2C_SDA P24
+#define I2C_SCL P25
+#define RX8025_INT P26
+#define VFD_EN P17
+#define P_STB P01
+#define P_CLK P02
+#define P_DIN P03
 
 typedef enum {
-    BTN_P33 = 0,
-    BTN_P34,
-    BTN_P35,
+    BTN_P16 = 0,
+    BTN_P15,
+    BTN_P14,
 } btn_gpio_t;
 
 typedef enum {
@@ -62,6 +67,7 @@ void hal_init_systick();
 u32 hal_systick_get();
 void hal_init_uart(void);
 void hal_init_all_gpio(void);
+void hal_init_i2c(void);
 void delay_ms(u32 ms);
 void delay_us(u32 us);
 u8 btn_gpio_read(btn_gpio_t gpio);

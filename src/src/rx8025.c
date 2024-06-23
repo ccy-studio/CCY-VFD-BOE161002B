@@ -10,131 +10,18 @@
 #define RX8025T_ADDR_W 0x64
 #define RX8025T_ADDR_R 0x65
 
-#define SDA_1 I2C_SDA = 1
-#define SDA_0 I2C_SDA = 0
-
-#define SCL_1 I2C_SCL = 1
-#define SCL_0 I2C_SCL = 0
-
-void i2c_sda_out() {
-    P1M1 |= 0x40;
-    P1M0 |= 0x40;
-}
-
-void i2c_sda_in() {
-    P1M1 |= 0x40;
-    P1M0 &= 0xbf;
-}
-
-void i2c_init() {
-    P1M1 |= 0x20;
-    P1M0 |= 0x20;
-    P1M1 |= 0x80;
-    P1M0 &= 0x7F;
-
-    i2c_sda_out();
-}
-
-void i2c_start() {
-    i2c_sda_out();
-    SDA_1;
-    SCL_1;
-    delay_us(4);
-    SDA_0;
-    delay_us(4);
-    SCL_0;
-}
-
-void i2c_stop() {
-    i2c_sda_out();
-    SCL_0;
-    SDA_0;
-    SCL_1;
-    delay_us(4);
-    SDA_1;
-    delay_us(4);
-}
-
-void i2c_nack() {
-    i2c_sda_out();
-    SDA_1;
-    SCL_0;
-    delay_us(4);
-    SCL_1;
-    delay_us(4);
-    SCL_0;
-}
-
-void i2c_ack() {
-    i2c_sda_out();
-    SDA_0;
-    SCL_0;
-    delay_us(4);
-    SCL_1;
-    delay_us(4);
-    SCL_0;
-}
-
-u8 i2c_check_ack() {
-    uint8_t ack = 0, errorRetry = 3;
-    SDA_1;
-    delay_us(1);
-    i2c_sda_in();
-    delay_us(1);
-    SCL_1;
-    delay_us(1);
-    while (I2C_SDA) {
-        if (errorRetry <= 0) {
-            break;
-        }
-        delay_us(1);
-        errorRetry--;
-    }
-    if (errorRetry) {
-        ack = 1;
-    }
-    if (!ack) {
-        i2c_stop();
-    }
-    SCL_0;
-    return ack;
+void i2c_start(){
+    if(I2CMSST)
+    I2CMSCR = 0x01;
 }
 
 u8 i2c_write(u8 buf) {
-    u8 i;
-    i2c_sda_out();
-    SCL_0;
-    delay_us(4);
-    for (i = 0; i < 8; i++) {
-        if (buf & 0x80) {
-            SDA_1;
-        } else {
-            SDA_0;
-        }
-        delay_us(4);
-        SCL_1;
-        delay_us(4);
-        SCL_0;
-        buf <<= 1;
-    }
-    return i2c_check_ack();
+   
 }
 
 u8 i2c_read(u8 ack) {
     uint8_t receiveData = 0, i;
-    i2c_sda_in();
-    for (i = 0; i < 8; i++) {
-        SCL_0;
-        delay_us(4);
-        SCL_1;
-        receiveData <<= 1;
-        if (I2C_SDA) {
-            receiveData |= 0x01;
-        }
-        delay_us(1);
-    }
-    SCL_0;
-    ack ? i2c_ack() : i2c_nack();
+   
     return receiveData;
 }
 

@@ -50,12 +50,13 @@ const u32 xdata fonts[38] = {
 u32 gui_get_font(char c);
 
 void start_pwm() {
+    PWMA_PS = 0x00;
     PWMA_CCER1 = 0x00;    // 写CCMRx前必须先清零CCERx关闭通道
     PWMA_CCMR2 = 0x68;    // 设置CC2为PWMA输出模式
-    PWMA_CCER1 = 0x10;    // 使能CC2通道
+    PWMA_CCER1 = 0x40;    // 使能CC2通道
     PWMA_CCR2 = PWM_CCR;  // 设置占空比时间
     PWMA_ARR = PWM_ARR;   // 设置周期时间
-    PWMA_ENO = 0x04;      // 使能PWM2P端口输出
+    PWMA_ENO = 0x08;      // 使能PWM2P端口输出
     PWMA_BKR = 0x80;      // 使能主输出
     PWMA_CR1 |= 0x81;     // 开始计时
 }
