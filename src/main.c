@@ -154,7 +154,7 @@ void main() {
         if (page_display_flag == PAGE_FLAG_CLOCK_TIME ||
             page_display_flag == PAGE_FLAG_CLOCK_DATE) {
             if (interval_check(time_wait_count, 500)) {
-                vfd_gui_set_text("saisaiwa", 1, 1);
+                vfd_gui_set_text("W2 235606", 1, 0);
                 time_wait_count = _systick_ccr;
             }
         }

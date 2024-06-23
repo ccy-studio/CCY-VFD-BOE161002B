@@ -20,7 +20,7 @@
 #define VFD_DIG_LEN 10
 
 #define PWM_ARR 1000  // 重载值
-#define PWM_CCR 65   // 比较值
+#define PWM_CCR 70   // 比较值
 
 /**
  * 初始化

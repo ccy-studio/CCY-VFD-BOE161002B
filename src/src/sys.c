@@ -20,8 +20,6 @@ void hal_init_uart(void) {
     usb_init();
     IE2 |= 0x80;
     EA = 1;
-    while (DeviceState != DEVSTATE_CONFIGURED)
-        ;
 }
 #else
 void hal_init_uart(void) {}

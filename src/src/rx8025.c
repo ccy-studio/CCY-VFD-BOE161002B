@@ -6,36 +6,23 @@
  * @LastEditTime: 2024-06-03 15:49:54
  */
 #include <rx8025.h>
+#include "i2c.h"
 
 #define RX8025T_ADDR_W 0x64
 #define RX8025T_ADDR_R 0x65
 
-void i2c_start(){
-    if(I2CMSST)
-    I2CMSCR = 0x01;
-}
-
-u8 i2c_write(u8 buf) {
-   
-}
-
-u8 i2c_read(u8 ack) {
-    uint8_t receiveData = 0, i;
-   
-    return receiveData;
-}
 
 void rx8025_read(u8 address, u8* buf, u8 len) {
     u8 i;
     i2c_start();
-    if (!i2c_write(RX8025T_ADDR_W)) {
+    if (!i2c_send(RX8025T_ADDR_W)) {
         return;
     }
-    if (!i2c_write(address)) {
+    if (!i2c_send(address)) {
         return;
     }
     i2c_start();
-    if (!i2c_write(RX8025T_ADDR_R)) {
+    if (!i2c_send(RX8025T_ADDR_R)) {
         return;
     }
     for (i = 0; i < len; i++) {
@@ -47,22 +34,18 @@ void rx8025_read(u8 address, u8* buf, u8 len) {
 void rx8025_write(u8 address, u8* buf, u8 len) {
     u8 i;
     i2c_start();
-    if (!i2c_write(RX8025T_ADDR_W)) {
+    if (!i2c_send(RX8025T_ADDR_W)) {
         return;
     }
-    if (!i2c_write(address)) {
+    if (!i2c_send(address)) {
         return;
     }
     for (i = 0; i < len; i++) {
-        if (!i2c_write(buf[i])) {
+        if (!i2c_send(buf[i])) {
             return;
         }
     }
     i2c_stop();
-}
-
-void rx8025t_init() {
-    i2c_init();
 }
 
 u8 toBcd(u8 val) {
@@ -81,7 +64,6 @@ void rx8025_set_time(u8 year,
                      u8 min,
                      u8 sec) {
     u8 command[7];
-    i2c_init();
     command[0] = toBcd(sec);
     command[1] = toBcd(min);
     command[2] = toBcd(hour);
@@ -94,7 +76,6 @@ void rx8025_set_time(u8 year,
 
 void rx8025_time_get(rx8025_timeinfo* timeinfo) {
     u8 buf[7];
-    i2c_init();
     rx8025_read(0x00, buf, 7);
     timeinfo->sec = toDec(buf[0]);
     timeinfo->min = toDec(buf[1]);

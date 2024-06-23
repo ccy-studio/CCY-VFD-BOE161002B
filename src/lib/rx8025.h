@@ -22,10 +22,6 @@ typedef struct {
     u8 sec;
 } rx8025_timeinfo;
 
-/**
- * init
- */
-void rx8025t_init();
 
 /**
  * set timeinfo
