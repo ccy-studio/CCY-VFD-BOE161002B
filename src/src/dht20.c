@@ -113,8 +113,8 @@ void dht20_read(dht20_val* val) {
         ret_data = ret_data & 0xfffff;
         t = ret_data;  // ÎÂ¶È
 
-        val->tmep = (t * 200 * 10 / 1024 / 1024 - 500) / 10.0;
-        val->humidity = (h * 100 * 10 / 1024 / 1024) / 10.0;
+        val->tmep = (t * 200.0 * 10 / 1024.0 / 1024.0 - 500) / 10.0;
+        val->humidity = (h * 100.0 * 10 / 1024.0 / 1024.0) / 10.0;
     } else {
         val->tmep = -1;
         val->humidity = -1;
@@ -160,8 +160,8 @@ void dht20_read(dht20_val* val) {
     ret_data = ret_data & 0xfffff;
     t = ret_data;  // ÎÂ¶È
 
-    val->tmep = t * 200 * 10 / 1024 / 1024 - 500;
-    val->humidity = h * 100 * 10 / 1024 / 1024;
+    val->tmep = (t / 1048576.00) * 200.0 - 50;
+    val->humidity = (h / 1048576.00) * 100;
 }
 
 #endif

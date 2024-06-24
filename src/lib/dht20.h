@@ -7,7 +7,7 @@
  */
 #include "sys.h"
 
-#define DHT20_CRC 1  // CRC是否检查
+#define DHT20_CRC 0  // CRC是否检查
 
 typedef struct {
     float tmep;      // 温度

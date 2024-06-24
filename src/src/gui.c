@@ -6,7 +6,7 @@
 u8 lightLevel = 1;  // 亮度级别
 static u8 data send_buf[3 * VFD_DIG_LEN] = {0};
 static u32 xdata dig_buf[VFD_DIG_LEN - 1] = {0};
-const u32 xdata fonts[40] = {
+const u32 xdata fonts[41] = {
     0xc00000,  // ASCII:-,ASCII_N:45
     0x020000,  // ASCII:.,ASCII_N:46
     0x080400,  // ASCII:/,ASCII_N:47
@@ -47,17 +47,24 @@ const u32 xdata fonts[40] = {
     0x0a1400,  // ASCII:X,ASCII_N:88
     0xc40300,  // ASCII:Y,ASCII_N:89
     0x092400,  // ASCII:Z,ASCII_N:90
+    0x0a1400,  // ASCII:%
 };
 
 u32 gui_get_font(char c);
 
 void start_pwm() {
+    /*  PWM 输出频率 = 系统时钟 SYSclk / ((PWM_PSCR + 1) * (PWM_ARR + 1))
+        PWM 输出频率 = 24 MHz / ((0 + 1) * (100 + 1))
+             = 24 MHz / 101
+             ≈ 237.62 kHz
+     */
     PWMA_PS = 0x00;
     PWMA_CCER1 = 0x00;    // 写CCMRx前必须先清零CCERx关闭通道
     PWMA_CCMR2 = 0x68;    // 设置CC2为PWMA输出模式
     PWMA_CCER1 = 0x40;    // 使能CC2通道
-    PWMA_CCR2 = PWM_CCR;  // 设置占空比时间
+    PWMA_PSCR = 0x0000;   // 不分频
     PWMA_ARR = PWM_ARR;   // 设置周期时间
+    PWMA_CCR2 = PWM_CCR;  // 设置占空比时间
     PWMA_ENO = 0x08;      // 使能PWM2P端口输出
     PWMA_BKR = 0x80;      // 使能主输出
     PWMA_CR1 |= 0x81;     // 开始计时
@@ -152,6 +159,9 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) {
 u32 gui_get_font(char c) {
     if (c == ' ') {
         return 0;
+    }
+    if (c == '%') {
+        return fonts[40];
     }
     if (c >= 45 && c <= 58) {
         return fonts[map(c, 45, 58, 0, 13)];

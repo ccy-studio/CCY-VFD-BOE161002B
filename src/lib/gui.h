@@ -1,5 +1,5 @@
 /*
- * @Description: 
+ * @Description:
  * @Blog: saisaiwa.com
  * @Author: ccy
  * @Date: 2024-06-03 09:21:08
@@ -19,8 +19,8 @@
 // VFD位数
 #define VFD_DIG_LEN 10
 
-#define PWM_ARR 1000  // 重载值
-#define PWM_CCR 70   // 比较值
+#define PWM_ARR 500  // 重载值 - 计数值
+#define PWM_CCR 75   // 比较值 - 占空比 ,占空比 = PWM_CCR / (PWM_ARR + 1)
 
 /**
  * 初始化
@@ -42,7 +42,7 @@ void vfd_gui_clear();
  * (自动清空覆盖显示，方便每次不用调用clear防止闪屏出现)
  * @param colon 是否显示冒号
  */
-void vfd_gui_set_text(char* string, const u8 point,const u8 icon);
+void vfd_gui_set_text(char* string, const u8 point, const u8 icon);
 
 /**
  * 对指定的DIG位点亮buf段

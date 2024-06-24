@@ -13,19 +13,11 @@
 
 void rx8025_read(u8 address, u8* buf, u8 len) {
     u8 i;
-    if (!i2c_start()) {
-        return;
-    }
-    if (!i2c_send(RX8025T_ADDR_W)) {
-        return;
-    }
-    if (!i2c_send(address)) {
-        return;
-    }
     i2c_start();
-    if (!i2c_send(RX8025T_ADDR_R)) {
-        return;
-    }
+    i2c_send(RX8025T_ADDR_W);
+    i2c_send(address);
+    i2c_start();
+    i2c_send(RX8025T_ADDR_R);
     for (i = 0; i < len; i++) {
         buf[i] = i2c_read((i == len - 1) ? 0 : 1);
     }
@@ -34,19 +26,11 @@ void rx8025_read(u8 address, u8* buf, u8 len) {
 
 void rx8025_write(u8 address, u8* buf, u8 len) {
     u8 i;
-    if (!i2c_start()) {
-        return;
-    }
-    if (!i2c_send(RX8025T_ADDR_W)) {
-        return;
-    }
-    if (!i2c_send(address)) {
-        return;
-    }
+    i2c_start();
+    i2c_send(RX8025T_ADDR_W);
+    i2c_send(address);
     for (i = 0; i < len; i++) {
-        if (!i2c_send(buf[i])) {
-            return;
-        }
+        i2c_send(buf[i]);
     }
     i2c_stop();
 }
@@ -110,9 +94,6 @@ void rx8025_time_get(rx8025_timeinfo* timeinfo) {
     if (timeinfo->sec >= 60) {
         timeinfo->sec = 0;
     }
-
-    printf("20%bd %02bd-%02bd\n", timeinfo->year, timeinfo->month,
-            timeinfo->day);
 }
 
 void formart_time(rx8025_timeinfo* timeinfo, char* buf) {

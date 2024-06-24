@@ -13,10 +13,19 @@
  * 等待命令执行成功
  */
 static void wait_exec() {
-    while (!(I2CMSST & 0x40))
-        ;
+    u8 cnt = 0;
+    while (!(I2CMSST & 0x40)) {
+        if (cnt >= 100) {
+            break;
+        }
+        cnt++;
+        delay_ms(1);
+    }
     // 中断位,置零
     I2CMSST &= ~0x40;
+    if (cnt >= 100) {
+        I2CMSST = 0x00;
+    }
 }
 
 bool i2c_send(u8 byte) {
