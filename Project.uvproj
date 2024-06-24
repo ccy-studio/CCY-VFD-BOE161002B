@@ -411,6 +411,11 @@
               <FileType>1</FileType>
               <FilePath>.\src\src\i2c.c</FilePath>
             </File>
+            <File>
+              <FileName>dht20.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\src\dht20.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

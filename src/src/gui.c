@@ -6,8 +6,10 @@
 u8 lightLevel = 1;  // ÁÁ¶È¼¶±ð
 static u8 data send_buf[3 * VFD_DIG_LEN] = {0};
 static u32 xdata dig_buf[VFD_DIG_LEN - 1] = {0};
-const u32 xdata fonts[38] = {
+const u32 xdata fonts[40] = {
     0xc00000,  // ASCII:-,ASCII_N:45
+    0x020000,  // ASCII:.,ASCII_N:46
+    0x080400,  // ASCII:/,ASCII_N:47
     0x392700,  // ASCII:0,ASCII_N:48
     0x200600,  // ASCII:1,ASCII_N:49
     0xd12200,  // ASCII:2,ASCII_N:50
@@ -151,13 +153,10 @@ u32 gui_get_font(char c) {
     if (c == ' ') {
         return 0;
     }
-    if (c == '-') {
-        return fonts[0];
-    }
-    if (c >= 48 && c <= 58) {
-        return fonts[map(c, 48, 58, 1, 11)];
+    if (c >= 45 && c <= 58) {
+        return fonts[map(c, 45, 58, 0, 13)];
     } else if (c >= 65 && c <= 90) {
-        return fonts[map(c, 65, 90, 12, 37)];
+        return fonts[map(c, 65, 90, 14, 39)];
     } else if (c >= 97 && c <= 122) {
         return gui_get_font(c - 32);
     } else {

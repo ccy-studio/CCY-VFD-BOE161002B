@@ -3,7 +3,7 @@
  * @Blog: saisaiwa.com
  * @Author: ccy
  * @Date: 2023-11-02 11:23:32
- * @LastEditTime: 2024-06-03 10:21:37
+ * @LastEditTime: 2024-06-24 15:13:44
  */
 #ifndef __MSYS_H
 #define __MSYS_H
@@ -14,9 +14,14 @@
 #include "STDLIB.H"
 #include "STRING.H"
 
-#define DEV_PLATFROM  // CDC虚拟串口开关
+// #define SYS_FOSC 24000000UL  // 24Mhz系统时钟
 
-// #define SYS_FOSC 24000000UL  // 24Mhz
+/* 选择需要驱动的方式，均已经代码实现了支持 */
+#define I2C_HARDWARE 1 //硬件I2C 驱动DHT21、RX8025-T
+
+/* 使用CDC串口+自定义复位命令实现Keil点击编译后自动复位并下载运行并自动开启串口 */
+#define DEV_PLATFROM  // CDC虚拟串口开关,生产环境请注释此行
+
 
 #ifndef DEV_PLATFROM
 typedef unsigned char uint8_t;
@@ -59,6 +64,9 @@ typedef struct {
     u32 last_press_time;
     u8 falg;  // 是否被处理
 } btn_t;
+
+
+/* 按键扫描配置 */
 #define BTN_SCAN_MS 1
 #define BTN_LONG_PRESS_MS 1000
 #define BTN_LONG_DOUBLE_MS 500

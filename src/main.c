@@ -1,3 +1,4 @@
+#include "dht20.h"
 #include "gui.h"
 #include "rx8025.h"
 
@@ -5,9 +6,13 @@
  * 0x0n 一级页面
  * 0x1x 二级页面(设置子页面)
  */
-#define PAGE_FLAG_CLOCK_TIME 0x01  // 时间显示页面
-#define PAGE_FLAG_CLOCK_DATE 0x02  // 日期显示页面
-#define PAGE_FLAG_SET_CLOCK 0x10   // 设置时间子页面
+#define PAGE_FLAG_CLOCK_TIME 0x00       // 时间显示页面
+#define PAGE_FLAG_CLOCK_DATE 0x01       // 日期显示页面
+#define PAGE_FLAG_SENSOR_TEMP 0x02      // 温度传感器显示页面
+#define PAGE_FLAG_SENSOR_HUMIDITY 0x03  // 湿度传感器显示页面
+#define PAGE_SUB_FLAG_SET_CLOCK 0x10    // 设置时间子页面
+
+#define PAGE_COUNT PAGE_FLAG_SENSOR_HUMIDITY  // 主页面最大数量
 
 /**
  * 屏幕保护程序间隔执行时间,单位毫秒默认2分钟一次
@@ -38,6 +43,9 @@ u32 data time_wait_count;
 u32 data page_wait_count;
 u32 data acg_wait_count;
 u32 data saver_wait_count;
+u32 data dht20_wait_count;
+
+dht20_val dht20;
 
 /**
  * 按钮定义
@@ -59,7 +67,6 @@ void main() {
     hal_init_uart();
     hal_init_systick();
     hal_init_i2c();
-    // rx8025t_init();
     vfd_gui_init();
 
     // 开启按键扫描定时器 1毫秒@24MHz
@@ -71,11 +78,13 @@ void main() {
     TR1 = 1;       // 定时器1开始计时
     ET1 = 1;       // 使能定时器1中断
 
-    vfd_gui_set_text("hi", 0, 1);
+    vfd_gui_set_text("Starting", 0, 1);
     vfd_gui_set_dig(9, 0xffffff);
-    delay_ms(2000);
+    delay_ms(500);
+    dht20_init();
+    dht20_read(&dht20);
+    delay_ms(1000);
     vfd_gui_clear();
-
     while (true) {
 #ifdef DEV_PLATFROM
         if (bUsbOutReady) {
@@ -86,11 +95,13 @@ void main() {
         if (btn_arr[0].falg) {
             // P33
             if (btn_arr[0].btn_type == BTN_PRESS) {
-                if (page_display_flag != PAGE_FLAG_SET_CLOCK) {
-                    page_display_flag =
-                        (page_display_flag == PAGE_FLAG_CLOCK_DATE
-                             ? PAGE_FLAG_CLOCK_TIME
-                             : PAGE_FLAG_CLOCK_DATE);
+                if (page_display_flag != PAGE_SUB_FLAG_SET_CLOCK) {
+                    // 当页面不是时间设置页的时候，切换页面显示内容
+                    if (page_display_flag + 1 > PAGE_COUNT) {
+                        page_display_flag = 0;
+                    } else {
+                        page_display_flag++;
+                    }
                 } else {
                     if (*set_clock_num_p == 0 || (*set_clock_num_p - 1) < min) {
                         *set_clock_num_p = max;
@@ -105,7 +116,7 @@ void main() {
         if (btn_arr[1].falg) {
             // P34
             if (btn_arr[1].btn_type == BTN_PRESS) {
-                if (page_display_flag == PAGE_FLAG_SET_CLOCK) {
+                if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
                     if ((*set_clock_num_p + 1) > max) {
                         *set_clock_num_p = min;
                     } else {
@@ -123,7 +134,7 @@ void main() {
         if (btn_arr[2].falg) {
             // P35
             if (btn_arr[2].btn_type == BTN_PRESS) {
-                if (page_display_flag == PAGE_FLAG_SET_CLOCK) {
+                if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
                     set_clock_item++;
                     if (set_clock_item > 3) {
                         set_clock_item = 1;
@@ -132,13 +143,13 @@ void main() {
                     acg_open = !acg_open;
                 }
             } else if (btn_arr[2].btn_type == BTN_LONG) {
-                if (page_display_flag == PAGE_FLAG_SET_CLOCK) {
+                if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
                     page_display_flag = PAGE_FLAG_CLOCK_TIME;
                     save_timeinfo_flag = true;
                     memset(buffer, 0, sizeof(buffer));
                 } else {
                     last_page_display_flag = page_display_flag;
-                    page_display_flag = PAGE_FLAG_SET_CLOCK;
+                    page_display_flag = PAGE_SUB_FLAG_SET_CLOCK;
                     set_clock_item = 1;
                     memcpy(&set_timeinfo_cache, &timeinfo, sizeof(timeinfo));
                 }
@@ -154,117 +165,114 @@ void main() {
         if (page_display_flag == PAGE_FLAG_CLOCK_TIME ||
             page_display_flag == PAGE_FLAG_CLOCK_DATE) {
             if (interval_check(time_wait_count, 500)) {
-                vfd_gui_set_text("W2 235606", 1, 0);
+                page_home();
+                time_wait_count = _systick_ccr;
+            }
+        } else if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
+            // 时间设置
+            if (interval_check(page_wait_count, 300)) {
+                static u8 flicker = 0;  // 闪烁标记
+                flicker = !flicker;
+                memset(buffer, 0x00, sizeof(buffer));
+                if (last_page_display_flag == PAGE_FLAG_CLOCK_TIME) {
+                    sprintf(buffer, " %02bd %02bd %02bd",
+                            set_timeinfo_cache.hour, set_timeinfo_cache.min,
+                            set_timeinfo_cache.sec);
+                    // 设置时间的
+                    if (set_clock_item == 1) {
+                        set_clock_num_p = &set_timeinfo_cache.hour;
+                        max = 23;
+                        min = 0;
+                        if (flicker) {
+                            memcpy(buffer + 1, "  ", 2);
+                        }
+                    } else if (set_clock_item == 2) {
+                        set_clock_num_p = &set_timeinfo_cache.min;
+                        max = 59;
+                        min = 0;
+                        if (flicker) {
+                            memcpy(buffer + 4, "  ", 2);
+                        }
+                    } else if (set_clock_item == 3) {
+                        set_clock_num_p = &set_timeinfo_cache.sec;
+                        max = 59;
+                        min = 0;
+                        if (flicker) {
+                            memcpy(buffer + 7, "  ", 2);
+                        }
+                    }
+                } else if (last_page_display_flag == PAGE_FLAG_CLOCK_DATE) {
+                    // 设置日期的
+                    sprintf(buffer, "20%bd%02bd-%02bd", set_timeinfo_cache.year,
+                            set_timeinfo_cache.month, set_timeinfo_cache.day);
+                    if (set_clock_item == 1) {
+                        set_clock_num_p = &set_timeinfo_cache.year;
+                        max = 99;
+                        min = 23;
+                        if (flicker) {
+                            memcpy(buffer + 2, "  ", 2);
+                        }
+                    } else if (set_clock_item == 2) {
+                        set_clock_num_p = &set_timeinfo_cache.month;
+                        max = 12;
+                        min = 1;
+                        if (flicker) {
+                            memcpy(buffer + 4, "  ", 2);
+                        }
+                    } else if (set_clock_item == 3) {
+                        set_clock_num_p = &set_timeinfo_cache.day;
+                        max = 31;
+                        min = 1;
+                        if (flicker) {
+                            memcpy(buffer + 7, "  ", 2);
+                        }
+                    }
+                }
+                acg_open = false;
+                vfd_gui_set_text(
+                    buffer,
+                    last_page_display_flag == PAGE_FLAG_CLOCK_DATE ? 0 : 1, 0);
+                page_wait_count = _systick_ccr;
+            }
+        } else if (page_display_flag == PAGE_FLAG_SENSOR_TEMP ||
+                   page_display_flag == PAGE_FLAG_SENSOR_HUMIDITY) {
+            // 显示温湿度
+            if (interval_check(time_wait_count, 500)) {
+                memset(buffer, 0, sizeof(buffer));
+                if (page_display_flag == PAGE_FLAG_SENSOR_TEMP) {
+                    sprintf(buffer, "T-%.4f", dht20.tmep);
+                } else {
+                    sprintf(buffer, "H-%.4f", dht20.humidity);
+                }
+                vfd_gui_set_text(buffer, 0, 0);
                 time_wait_count = _systick_ccr;
             }
         }
 
-        // if (page_display_flag == PAGE_FLAG_CLOCK_TIME ||
-        //     page_display_flag == PAGE_FLAG_CLOCK_DATE) {
-        //     if (interval_check(time_wait_count, 500)) {
-        //         page_home();
-        //         time_wait_count = _systick_ccr;
-        //     }
-        // } else {
-        //     // 时间设置
-        //     if (interval_check(page_wait_count, 300)) {
-        //         static u8 flicker = 0;  // 闪烁标记
-        //         flicker = !flicker;
-        //         memset(buffer, 0x00, sizeof(buffer));
-        //         if (last_page_display_flag == PAGE_FLAG_CLOCK_TIME) {
-        //             sprintf(buffer, " %02bd %02bd %02bd",
-        //                     set_timeinfo_cache.hour,
-        //                     set_timeinfo_cache.min,
-        //                     set_timeinfo_cache.sec);
-        //             // 设置时间的
-        //             if (set_clock_item == 1) {
-        //                 set_clock_num_p = &set_timeinfo_cache.hour;
-        //                 max = 23;
-        //                 min = 0;
-        //                 if (flicker) {
-        //                     memcpy(buffer + 1, "  ", 2);
-        //                 }
-        //             } else if (set_clock_item == 2) {
-        //                 set_clock_num_p = &set_timeinfo_cache.min;
-        //                 max = 59;
-        //                 min = 0;
-        //                 if (flicker) {
-        //                     memcpy(buffer + 4, "  ", 2);
-        //                 }
-        //             } else if (set_clock_item == 3) {
-        //                 set_clock_num_p = &set_timeinfo_cache.sec;
-        //                 max = 59;
-        //                 min = 0;
-        //                 if (flicker) {
-        //                     memcpy(buffer + 7, "  ", 2);
-        //                 }
-        //             }
-        //         } else if (last_page_display_flag ==
-        //         PAGE_FLAG_CLOCK_DATE) {
-        //             // 设置日期的
-        //             sprintf(buffer, "20%bd%02bd-%02bd",
-        //             set_timeinfo_cache.year,
-        //                     set_timeinfo_cache.month,
-        //                     set_timeinfo_cache.day);
-        //             if (set_clock_item == 1) {
-        //                 set_clock_num_p = &set_timeinfo_cache.year;
-        //                 max = 99;
-        //                 min = 23;
-        //                 if (flicker) {
-        //                     memcpy(buffer + 2, "  ", 2);
-        //                 }
-        //             } else if (set_clock_item == 2) {
-        //                 set_clock_num_p = &set_timeinfo_cache.month;
-        //                 max = 12;
-        //                 min = 1;
-        //                 if (flicker) {
-        //                     memcpy(buffer + 4, "  ", 2);
-        //                 }
-        //             } else if (set_clock_item == 3) {
-        //                 set_clock_num_p = &set_timeinfo_cache.day;
-        //                 max = 31;
-        //                 min = 1;
-        //                 if (flicker) {
-        //                     memcpy(buffer + 7, "  ", 2);
-        //                 }
-        //             }
-        //         }
-        //         acg_open = false;
-        //         vfd_gui_set_text(
-        //             buffer,
-        //             last_page_display_flag == PAGE_FLAG_CLOCK_DATE ? 0 :
-        //             1, 0);
-        //         page_wait_count = _systick_ccr;
-        //     }
-        // }
-
-        // // 时间保存设定
-        // if (save_timeinfo_flag) {
-        //     if (last_page_display_flag == PAGE_FLAG_CLOCK_DATE) {
-        //         // 设置日期保留时间
-        //         set_timeinfo_cache.hour = timeinfo.hour;
-        //         set_timeinfo_cache.min = timeinfo.min;
-        //         set_timeinfo_cache.sec = timeinfo.sec;
-        //     } else {
-        //         // 设置时间保留日期
-        //         set_timeinfo_cache.year = timeinfo.year;
-        //         set_timeinfo_cache.month = timeinfo.month;
-        //         set_timeinfo_cache.day = timeinfo.day;
-        //         set_timeinfo_cache.week = timeinfo.week;
-        //     }
-        //     rx8025_set_time(set_timeinfo_cache.year,
-        //     set_timeinfo_cache.month,
-        //                     set_timeinfo_cache.day,
-        //                     set_timeinfo_cache.week - 1,
-        //                     set_timeinfo_cache.hour,
-        //                     set_timeinfo_cache.min,
-        //                     set_timeinfo_cache.sec);
-        //     memset(&set_timeinfo_cache, 0x00,
-        //     sizeof(set_timeinfo_cache)); save_timeinfo_flag = false;
-        // }
+        // 时间保存设定
+        if (save_timeinfo_flag) {
+            if (last_page_display_flag == PAGE_FLAG_CLOCK_DATE) {
+                // 设置日期保留时间
+                set_timeinfo_cache.hour = timeinfo.hour;
+                set_timeinfo_cache.min = timeinfo.min;
+                set_timeinfo_cache.sec = timeinfo.sec;
+            } else {
+                // 设置时间保留日期
+                set_timeinfo_cache.year = timeinfo.year;
+                set_timeinfo_cache.month = timeinfo.month;
+                set_timeinfo_cache.day = timeinfo.day;
+                set_timeinfo_cache.week = timeinfo.week;
+            }
+            rx8025_set_time(set_timeinfo_cache.year, set_timeinfo_cache.month,
+                            set_timeinfo_cache.day, set_timeinfo_cache.week - 1,
+                            set_timeinfo_cache.hour, set_timeinfo_cache.min,
+                            set_timeinfo_cache.sec);
+            memset(&set_timeinfo_cache, 0x00, sizeof(set_timeinfo_cache));
+            save_timeinfo_flag = false;
+        }
 
         // vfd特效动画
-        if (acg_open && page_display_flag != PAGE_FLAG_SET_CLOCK) {
+        if (acg_open && page_display_flag != PAGE_SUB_FLAG_SET_CLOCK) {
             if (interval_check(acg_wait_count, 150)) {
                 vfd_gui_acg_update();
                 acg_wait_count = _systick_ccr;
@@ -272,210 +280,18 @@ void main() {
         }
 
         // 屏幕保护程序
-        if (vfd_saver_open && page_display_flag != PAGE_FLAG_SET_CLOCK) {
+        if (vfd_saver_open && page_display_flag != PAGE_SUB_FLAG_SET_CLOCK) {
             if (interval_check(saver_wait_count, SCREEN_SAVER_TIME)) {
                 vfd_gui_display_protect_exec();
                 saver_wait_count = _systick_ccr;
             }
         }
+
+        if (interval_check(dht20_wait_count, 1000)) {
+            dht20_read(&dht20);
+            dht20_wait_count = _systick_ccr;
+        }
     }
-
-    // vfd_gui_set_text("hi", 0, 1);
-    // vfd_gui_set_dig(9, 0xffffff);
-    // delay_ms(2000);
-
-    // while (1) {
-    //     //====>>>>>>按钮的触发扫描 -> Start
-    //     // P33- P34+ P35M
-    //     if (btn_arr[0].falg) {
-    //         // P33
-    //         if (btn_arr[0].btn_type == BTN_PRESS) {
-    //             if (page_display_flag != PAGE_FLAG_SET_CLOCK) {
-    //                 page_display_flag =
-    //                     (page_display_flag == PAGE_FLAG_CLOCK_DATE
-    //                          ? PAGE_FLAG_CLOCK_TIME
-    //                          : PAGE_FLAG_CLOCK_DATE);
-    //             } else {
-    //                 if (*set_clock_num_p == 0 || (*set_clock_num_p - 1) <
-    //                 min) {
-    //                     *set_clock_num_p = max;
-    //                 } else {
-    //                     *set_clock_num_p -= 1;
-    //                 }
-    //             }
-    //         } else if (btn_arr[0].btn_type == BTN_LONG) {
-    //         }
-    //         btn_arr[0].falg = 0;
-    //     }
-    //     if (btn_arr[1].falg) {
-    //         // P34
-    //         if (btn_arr[1].btn_type == BTN_PRESS) {
-    //             if (page_display_flag == PAGE_FLAG_SET_CLOCK) {
-    //                 if ((*set_clock_num_p + 1) > max) {
-    //                     *set_clock_num_p = min;
-    //                 } else {
-    //                     *set_clock_num_p += 1;
-    //                 }
-    //             } else {
-    //                 // 亮度调整
-    //                 vfd_brightness = (vfd_brightness + 1) % 3;
-    //             }
-    //         } else if (btn_arr[1].btn_type == BTN_LONG) {
-    //             IAP_CONTR = 0x60;  // 软复位到ISP进行下载
-    //         }
-    //         btn_arr[1].falg = 0;
-    //     }
-    //     if (btn_arr[2].falg) {
-    //         // P35
-    //         if (btn_arr[2].btn_type == BTN_PRESS) {
-    //             if (page_display_flag == PAGE_FLAG_SET_CLOCK) {
-    //                 set_clock_item++;
-    //                 if (set_clock_item > 3) {
-    //                     set_clock_item = 1;
-    //                 }
-    //             } else {
-    //                 acg_open = !acg_open;
-    //             }
-    //         } else if (btn_arr[2].btn_type == BTN_LONG) {
-    //             if (page_display_flag == PAGE_FLAG_SET_CLOCK) {
-    //                 page_display_flag = PAGE_FLAG_CLOCK_TIME;
-    //                 save_timeinfo_flag = true;
-    //                 memset(buffer, 0, sizeof(buffer));
-    //             } else {
-    //                 last_page_display_flag = page_display_flag;
-    //                 page_display_flag = PAGE_FLAG_SET_CLOCK;
-    //                 set_clock_item = 1;
-    //                 memcpy(&set_timeinfo_cache, &timeinfo,
-    //                 sizeof(timeinfo));
-    //             }
-    //         }
-    //         btn_arr[2].falg = 0;
-    //     }
-    //     //====>>>>>>按钮的触发扫描 -> End
-
-    //     // 动态亮度调整
-    //     vfd_gui_set_blk_level(vfd_brightness_level[vfd_brightness]);
-    //     // 主页面内容筛选
-    //     if (page_display_flag == PAGE_FLAG_CLOCK_TIME ||
-    //         page_display_flag == PAGE_FLAG_CLOCK_DATE) {
-    //         if (interval_check(time_wait_count, 500)) {
-    //             page_home();
-    //             time_wait_count = _systick_ccr;
-    //         }
-    //     } else {
-    //         // 时间设置
-    //         if (interval_check(page_wait_count, 300)) {
-    //             static u8 flicker = 0;  // 闪烁标记
-    //             flicker = !flicker;
-    //             memset(buffer, 0x00, sizeof(buffer));
-    //             if (last_page_display_flag == PAGE_FLAG_CLOCK_TIME) {
-    //                 sprintf(buffer, " %02bd %02bd %02bd",
-    //                         set_timeinfo_cache.hour,
-    //                         set_timeinfo_cache.min,
-    //                         set_timeinfo_cache.sec);
-    //                 // 设置时间的
-    //                 if (set_clock_item == 1) {
-    //                     set_clock_num_p = &set_timeinfo_cache.hour;
-    //                     max = 23;
-    //                     min = 0;
-    //                     if (flicker) {
-    //                         memcpy(buffer + 1, "  ", 2);
-    //                     }
-    //                 } else if (set_clock_item == 2) {
-    //                     set_clock_num_p = &set_timeinfo_cache.min;
-    //                     max = 59;
-    //                     min = 0;
-    //                     if (flicker) {
-    //                         memcpy(buffer + 4, "  ", 2);
-    //                     }
-    //                 } else if (set_clock_item == 3) {
-    //                     set_clock_num_p = &set_timeinfo_cache.sec;
-    //                     max = 59;
-    //                     min = 0;
-    //                     if (flicker) {
-    //                         memcpy(buffer + 7, "  ", 2);
-    //                     }
-    //                 }
-    //             } else if (last_page_display_flag ==
-    //             PAGE_FLAG_CLOCK_DATE) {
-    //                 // 设置日期的
-    //                 sprintf(buffer, "20%bd%02bd-%02bd",
-    //                 set_timeinfo_cache.year,
-    //                         set_timeinfo_cache.month,
-    //                         set_timeinfo_cache.day);
-    //                 if (set_clock_item == 1) {
-    //                     set_clock_num_p = &set_timeinfo_cache.year;
-    //                     max = 99;
-    //                     min = 23;
-    //                     if (flicker) {
-    //                         memcpy(buffer + 2, "  ", 2);
-    //                     }
-    //                 } else if (set_clock_item == 2) {
-    //                     set_clock_num_p = &set_timeinfo_cache.month;
-    //                     max = 12;
-    //                     min = 1;
-    //                     if (flicker) {
-    //                         memcpy(buffer + 4, "  ", 2);
-    //                     }
-    //                 } else if (set_clock_item == 3) {
-    //                     set_clock_num_p = &set_timeinfo_cache.day;
-    //                     max = 31;
-    //                     min = 1;
-    //                     if (flicker) {
-    //                         memcpy(buffer + 7, "  ", 2);
-    //                     }
-    //                 }
-    //             }
-    //             acg_open = false;
-    //             vfd_gui_set_text(
-    //                 buffer,
-    //                 last_page_display_flag == PAGE_FLAG_CLOCK_DATE ? 0 :
-    //                 1, 0);
-    //             page_wait_count = _systick_ccr;
-    //         }
-    //     }
-
-    //     // 时间保存设定
-    //     if (save_timeinfo_flag) {
-    //         if (last_page_display_flag == PAGE_FLAG_CLOCK_DATE) {
-    //             // 设置日期保留时间
-    //             set_timeinfo_cache.hour = timeinfo.hour;
-    //             set_timeinfo_cache.min = timeinfo.min;
-    //             set_timeinfo_cache.sec = timeinfo.sec;
-    //         } else {
-    //             // 设置时间保留日期
-    //             set_timeinfo_cache.year = timeinfo.year;
-    //             set_timeinfo_cache.month = timeinfo.month;
-    //             set_timeinfo_cache.day = timeinfo.day;
-    //             set_timeinfo_cache.week = timeinfo.week;
-    //         }
-    //         rx8025_set_time(set_timeinfo_cache.year,
-    //         set_timeinfo_cache.month,
-    //                         set_timeinfo_cache.day,
-    //                         set_timeinfo_cache.week - 1,
-    //                         set_timeinfo_cache.hour,
-    //                         set_timeinfo_cache.min,
-    //                         set_timeinfo_cache.sec);
-    //         memset(&set_timeinfo_cache, 0x00,
-    //         sizeof(set_timeinfo_cache)); save_timeinfo_flag = false;
-    //     }
-
-    //     // vfd特效动画
-    //     if (acg_open && page_display_flag != PAGE_FLAG_SET_CLOCK) {
-    //         if (interval_check(acg_wait_count, 150)) {
-    //             vfd_gui_acg_update();
-    //             acg_wait_count = _systick_ccr;
-    //         }
-    //     }
-
-    //     // 屏幕保护程序
-    //     if (vfd_saver_open && page_display_flag != PAGE_FLAG_SET_CLOCK) {
-    //         if (interval_check(saver_wait_count, SCREEN_SAVER_TIME)) {
-    //             vfd_gui_display_protect_exec();
-    //             saver_wait_count = _systick_ccr;
-    //         }
-    //     }
-    // }
 }
 
 bool interval_check(u32 select, u32 t) {

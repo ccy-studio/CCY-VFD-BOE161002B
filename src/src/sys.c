@@ -48,18 +48,15 @@ void timer0_Isr(void) interrupt 1 {
 void hal_init_all_gpio(void) {
     P0M0 = 0x0e;
     P0M1 = 0x00;
-    P2M0 = 0x70;
-    P2M1 = 0x70;
     P1M0 = 0x88;
     P1M1 = 0x70;
+    P2M0 = 0x00;
+    P2M1 = 0x00;
 
     // I2C内部上拉
     P2PU = 0x70;
     // Key内部上拉
     P1PU = 0x70;
-
-    // 开启硬件I2C
-    P_SW2 = (P_SW2 & ~0x30) | 0x10;  // I2C: I2CSCL(P2.5), I2CSDA(P2.4)
 
     EA = 1;  // 开总中断
 }
@@ -99,7 +96,18 @@ u8 btn_gpio_read(btn_gpio_t gpio) {
     return 0;
 }
 
-void hal_init_i2c(void){
-    //I2C总线速度=Fosc/2/(MSSPEED*2+4)
-    I2CCFG = 0xCD; //MSSPEED = 13; 24000000/2/(13*2+4) = 400Khz
+#if I2C_HARDWARE == 0
+extern void i2c_init();
+#endif
+
+void hal_init_i2c(void) {
+#if I2C_HARDWARE
+    // 开启硬件I2C
+    P_SW2 = (P_SW2 & ~0x30) | 0x10;  // I2C: I2CSCL(P2.5), I2CSDA(P2.4)
+    // I2C总线速度=Fosc/2/(MSSPEED*2+4)
+    I2CCFG = 0xCD;  // MSSPEED = 13; 24000000/2/(13*2+4) = 400Khz
+    I2CMSST = 0x00;
+#else
+    i2c_init();
+#endif
 }

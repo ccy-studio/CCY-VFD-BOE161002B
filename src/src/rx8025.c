@@ -3,7 +3,7 @@
  * @Blog: saisaiwa.com
  * @Author: ccy
  * @Date: 2023-09-04 10:53:37
- * @LastEditTime: 2024-06-03 15:49:54
+ * @LastEditTime: 2024-06-24 16:24:09
  */
 #include <rx8025.h>
 #include "i2c.h"
@@ -11,10 +11,11 @@
 #define RX8025T_ADDR_W 0x64
 #define RX8025T_ADDR_R 0x65
 
-
 void rx8025_read(u8 address, u8* buf, u8 len) {
     u8 i;
-    i2c_start();
+    if (!i2c_start()) {
+        return;
+    }
     if (!i2c_send(RX8025T_ADDR_W)) {
         return;
     }
@@ -33,7 +34,9 @@ void rx8025_read(u8 address, u8* buf, u8 len) {
 
 void rx8025_write(u8 address, u8* buf, u8 len) {
     u8 i;
-    i2c_start();
+    if (!i2c_start()) {
+        return;
+    }
     if (!i2c_send(RX8025T_ADDR_W)) {
         return;
     }
@@ -75,7 +78,7 @@ void rx8025_set_time(u8 year,
 }
 
 void rx8025_time_get(rx8025_timeinfo* timeinfo) {
-    u8 buf[7];
+    u8 buf[7] = {0};
     rx8025_read(0x00, buf, 7);
     timeinfo->sec = toDec(buf[0]);
     timeinfo->min = toDec(buf[1]);
@@ -107,6 +110,9 @@ void rx8025_time_get(rx8025_timeinfo* timeinfo) {
     if (timeinfo->sec >= 60) {
         timeinfo->sec = 0;
     }
+
+    printf("20%bd %02bd-%02bd\n", timeinfo->year, timeinfo->month,
+            timeinfo->day);
 }
 
 void formart_time(rx8025_timeinfo* timeinfo, char* buf) {

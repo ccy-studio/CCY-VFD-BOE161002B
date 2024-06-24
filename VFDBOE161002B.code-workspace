@@ -24,7 +24,8 @@
             "*.cc": "cpp",
             "STRING.H": "cpp",
             "STDIO.H": "cpp",
-            "STC8H.H": "cpp"
+            "STC8H.H": "cpp",
+            "MATH.H": "cpp"
         },
         "C_Cpp.default.configurationProvider": "cl.eide",
         "[yaml]": {
