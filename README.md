@@ -3,9 +3,9 @@
  * @Blog: saisaiwa.com
  * @Author: ccy
  * @Date: 2024-05-31 10:53:09
- * @LastEditTime: 2024-06-03 16:54:43
+ * @LastEditTime: 2024-06-25 11:31:03
 -->
-# CCY-VFD-BOE161002B
+# VFD Desktop Clock Ornament (Reverse Display)
 <div align="center">
 	<p align="center">
 		<a href="#" target="_blank">
@@ -24,12 +24,16 @@
 - Model: VFD16-1002B
 - PIN: 10GR and 16SG
 
-<img src="./doc/¶ÎÎ»Í¼.png" width="70%"/>
+Hardware open source address: https://oshwhub.com/yc_chen/boe-vfd-display-screen-deskt
 
-### Drive
-**MCU:** STC8H1K08
+<img src="doc/¶ÎÎ»Í¼.png" width="70%"/>
 
-**IRC Frequency:** 22.1184Mhz
+### Driver program - V1.1
+**MCU:** STC8H8K64U
+
+**IRC Frequency:** 24Mhz
+
+Use the USB downloader program, the CDC serial port is turned on by default, and it can be downloaded automatically after compilation without power-off
 
 ### About
 
