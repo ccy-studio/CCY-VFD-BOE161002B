@@ -1,42 +1,250 @@
 {
-  "name": "VFDBOE161002B",
-  "type": "C51",
+  "name": "Project",
+  "type": "ARM",
   "dependenceList": [],
-  "srcDirs": [
-    "src"
-  ],
-  "outDir": "build",
+  "srcDirs": [],
   "virtualFolder": {
     "name": "<virtual_root>",
     "files": [],
-    "folders": []
+    "folders": [
+      {
+        "name": "Common",
+        "files": [
+          {
+            "path": "MDK-ARM/startup_py32f002bxx.s"
+          },
+          {
+            "path": "Src/system_py32f002b.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Application",
+        "files": [],
+        "folders": [
+          {
+            "name": "User",
+            "files": [
+              {
+                "path": "Src/main.c"
+              },
+              {
+                "path": "Src/py32f002b_hal_msp.c"
+              },
+              {
+                "path": "Src/py32f002b_it.c"
+              }
+            ],
+            "folders": []
+          }
+        ]
+      },
+      {
+        "name": "Drivers",
+        "files": [],
+        "folders": [
+          {
+            "name": "PY32F002B_HAL_Driver",
+            "files": [
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_cortex.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_exti.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_flash.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_gpio.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_i2c.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_pwr.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_rcc.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_rcc_ex.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_tim.c"
+              },
+              {
+                "path": "Drivers/PY32F002B_HAL_Driver/Src/py32f002b_hal_tim_ex.c"
+              }
+            ],
+            "folders": []
+          }
+        ]
+      },
+      {
+        "name": "::CMSIS",
+        "files": [],
+        "folders": []
+      }
+    ]
   },
+  "outDir": "build",
+  "deviceName": null,
+  "packDir": null,
   "miscInfo": {
-    "uid": "1e3a86450182c6c6afc1f4fb31f6f58b"
+    "uid": "1139b9f6bbc743afa76d8bffba34bdab"
   },
   "targets": {
-    "Release": {
+    "PY32F002Bx5_Project": {
       "excludeList": [],
-      "toolchain": "Keil_C51",
+      "toolchain": "AC6",
       "compileConfig": {
-        "options": ""
+        "cpuType": "Cortex-M0+",
+        "floatingPointHardware": "none",
+        "scatterFilePath": "MDK-ARM/Objects/Project.sct",
+        "useCustomScatterFile": false,
+        "storageLayout": {
+          "RAM": [
+            {
+              "tag": "RAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x20000000",
+                "size": "0xc00"
+              },
+              "isChecked": true,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            }
+          ],
+          "ROM": [
+            {
+              "tag": "ROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "IROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x8000000",
+                "size": "0x6000"
+              },
+              "isChecked": true,
+              "isStartup": true
+            },
+            {
+              "tag": "IROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            }
+          ]
+        },
+        "options": "null"
       },
-      "uploader": "Custom",
+      "uploader": "JLink",
       "uploadConfig": {
         "bin": "",
-        "commandLine": "python ./tools/stcflash.py -p ${port} \"${hexFile}\"",
-        "eraseChipCommand": ""
+        "baseAddr": "",
+        "cpuInfo": {
+          "vendor": "null",
+          "cpuName": "null"
+        },
+        "proType": 1,
+        "speed": 8000,
+        "otherCmds": ""
       },
       "uploadConfigMap": {},
       "custom_dep": {
         "name": "default",
-        "incList": [],
+        "incList": [
+          "Inc",
+          "Drivers/CMSIS/Include",
+          "Drivers/CMSIS/Device/PY32F0xx/Include",
+          "Drivers/PY32F002B_HAL_Driver/Inc",
+          ".cmsis/include",
+          "MDK-ARM/RTE/_PY32F002Bx5_Project"
+        ],
         "libList": [],
-        "defineList": []
+        "defineList": [
+          "USE_HAL_DRIVER",
+          "PY32F002Bx5"
+        ]
       }
     }
   },
-  "version": "3.4",
-  "deviceName": null,
-  "packDir": null
+  "version": "3.4"
 }

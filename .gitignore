@@ -13,7 +13,3 @@
 # eide template
 *.ept
 *.eide-template
-/.vscode/c_cpp_properties.json
-/Listings/**
-/Objects/**
-Project.uvgui.*
