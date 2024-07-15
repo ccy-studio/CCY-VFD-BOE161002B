@@ -1,30 +1,13 @@
-/**
- ******************************************************************************
- * @file    main.c
- * @author  MCU Application Team
- * @brief   Main program body
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) Puya Semiconductor Co.
- * All rights reserved.</center></h2>
- *
- * <h2><center>&copy; Copyright (c) 2016 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
- */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "gui.h"
+#include "rx8025t.h"
 #include "sys.h"
+#include "ws2812.h"
 /* Private define ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+u8 buffer[10];  // vfd显示缓存
+static rx8025_timeinfo timeinfo;
 /* Private user code ---------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -40,13 +23,33 @@ int main(void) {
 
     /* System clock configuration */
     APP_SystemClockConfig();
-    HAL_Delay(50);
     sys_gpio_init();
+    sys_init_i2c();
+    sys_init_pwm();
+    sys_init_rgb();
+
+    // 初始化GUI
+    vfd_gui_init();
+    // 开启电源
     sys_open_power();
 
     /* infinite loop */
+    rx8025_set_time(24, 7, 15, 1, 20, 1, 5);
+    vfd_gui_set_text("Start", 1, 1);
+    HAL_Delay(500);
+
+    rx8025_time_get(&timeinfo);
+    memset(buffer, 0x00, sizeof(buffer));
+    formart_time(&timeinfo, &buffer);
+    vfd_gui_set_text(buffer, 1, 0);
+    HAL_Delay(1000);
+    memset(buffer, 0x00, sizeof(buffer));
+    formart_time(&timeinfo, &buffer);
+    vfd_gui_set_text(buffer, 1, 0);
+
     while (1) {
-        HAL_Delay(500);
+        HAL_Delay(2);
+        rgb_frame_update(255, 1);
     }
 }
 
@@ -120,5 +123,3 @@ void assert_failed(uint8_t* file, uint32_t line) {
     }
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT Puya *****END OF FILE******************/

@@ -1,3 +1,10 @@
+/*
+ * @Description: 
+ * @Blog: saisaiwa.com
+ * @Author: ccy
+ * @Date: 2024-07-15 10:16:01
+ * @LastEditTime: 2024-07-15 15:55:28
+ */
 #ifndef __SYSH
 #define __SYSH
 
@@ -6,6 +13,7 @@ extern "C" {
 #endif
 
 #include "main.h"
+#include <string.h>
 
 #define VFD_EN_GPIO_PORT GPIOC
 #define VFD_EN_GPIO_PIN GPIO_PIN_1
@@ -35,12 +43,14 @@ extern "C" {
 #define I2C_SCL_GPIO_PIN GPIO_PIN_3
 #define I2C_SDA_GPIO_PIN GPIO_PIN_4
 
-
 void sys_gpio_init();
 void sys_init_i2c();
 void sys_init_pwm();
+void sys_init_rgb();
 void sys_open_power();
 void sys_close_power();
+void delay_us(u32 us);
+void delay_ms(u32 ms);
 
 #ifdef __cplusplus
 }

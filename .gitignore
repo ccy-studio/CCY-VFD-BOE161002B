@@ -13,3 +13,9 @@
 # eide template
 *.ept
 *.eide-template
+
+/MDK-ARM/DebugConfig
+/MDK-ARM/Output
+/MDK-ARM/RTE
+/MDK-ARM/*.scvd
+/MDK-ARM/*.uvguix.*

@@ -1,0 +1,406 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Embedded_drive\Keil_v5\C51\BIN\C51.EXE src\main.c LARGE OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(./s
+                    -rc/lib) DEBUG PRINT(.\Listings\main.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "dht20.h"
+   2          #include "gui.h"
+   3          #include "rx8025.h"
+   4          
+   5          /**
+   6           * 0x0n 一级页面
+   7           * 0x1x 二级页面(设置子页面)
+   8           */
+   9          #define PAGE_FLAG_CLOCK_TIME 0x00       // 时间显示页面
+  10          #define PAGE_FLAG_CLOCK_DATE 0x01       // 日期显示页面
+  11          #define PAGE_FLAG_SENSOR_TEMP 0x02      // 温度传感器显示页面
+  12          #define PAGE_FLAG_SENSOR_HUMIDITY 0x03  // 湿度传感器显示页面
+  13          #define PAGE_SUB_FLAG_SET_CLOCK 0x10    // 设置时间子页面
+  14          
+  15          #define PAGE_COUNT PAGE_FLAG_SENSOR_HUMIDITY  // 主页面最大数量
+  16          
+  17          /**
+  18           * 屏幕保护程序间隔执行时间,单位毫秒默认2分钟一次
+  19           */
+  20          #define SCREEN_SAVER_TIME 120000UL
+  21          // #define SCREEN_SAVER_TIME 10000UL
+  22          
+  23          u8 vfd_brightness_level[3] = {1, 2, 7};  // VFD亮度等级
+  24          u8 vfd_brightness = 2;                   // VFD亮度等级Level下标
+  25          bool acg_open = true;                    // vfd动画特效开关
+  26          bool vfd_saver_open = true;              // vfd屏幕保护程序开关
+  27          
+  28          u8 data page_display_flag = PAGE_FLAG_CLOCK_TIME;  // 页面显示内容
+  29          u8 last_page_display_flag;                         // 上次页面显示内容
+  30          rx8025_timeinfo data timeinfo;  // 主动态更新的时间对象
+  31          
+  32          rx8025_timeinfo set_timeinfo_cache;  // 设置timeinfo时的缓存
+  33          u8 max, min;  // 设置时间的时候的临时变量，记录当前设置值的最大和最小阈值范围
+  34          bool save_timeinfo_flag = false;  // 触发保存时间的操作flag
+  35          u8 data buffer[12];               // vfd显示缓存
+  36          bool point_flag = 0;              // vfd冒号显示状态
+  37          
+  38          u8* set_clock_num_p;    // 记录时间设置的指针变量
+  39          u8 set_clock_item = 1;  // 记录时间设置的时间项
+  40          
+  41          // 时间等待记录变量
+  42          u32 data time_wait_count;
+  43          u32 data page_wait_count;
+  44          u32 data acg_wait_count;
+  45          u32 data saver_wait_count;
+  46          u32 data dht20_wait_count;
+  47          
+  48          static dht20_val dht20;
+  49          
+  50          /**
+  51           * 按钮定义
+  52           */
+  53          static btn_t data btn_arr[3] = {
+  54              {BTN_P14, BTN_RELEASE, 0, 0},
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 2   
+
+  55              {BTN_P15, BTN_RELEASE, 0, 0},
+  56              {BTN_P16, BTN_RELEASE, 0, 0},
+  57          };
+  58          
+  59          extern u32 data _systick_ccr;  // 系统滴答定时器走时
+  60          
+  61          bool interval_check(u32 select, u32 t);  // 检查时间是否满足条件
+  62          void page_home();
+  63          void page_sensor();
+  64          void page_sub_set_datetime();
+  65          
+  66          void main() {
+  67   1          P_SW2 |= 0x80;  // 使能EAXFR寄存器 XFR
+  68   1          hal_init_all_gpio();
+  69   1          hal_init_uart();
+  70   1          hal_init_systick();
+  71   1          hal_init_i2c();
+  72   1          vfd_gui_init();
+  73   1      
+  74   1          // 开启按键扫描定时器 1毫秒@24MHz
+  75   1          AUXR |= 0x40;  // 定时器时钟1T模式
+  76   1          TMOD &= 0x0F;  // 设置定时器模式
+  77   1          TL1 = 0x40;    // 设置定时初始值
+  78   1          TH1 = 0xA2;    // 设置定时初始值
+  79   1          TF1 = 0;       // 清除TF1标志
+  80   1          TR1 = 1;       // 定时器1开始计时
+  81   1          ET1 = 1;       // 使能定时器1中断
+  82   1      
+  83   1          vfd_gui_set_text("Starting", 0, 1);
+  84   1          vfd_gui_set_dig(9, 0xffffff);
+  85   1          delay_ms(500);
+  86   1          dht20_init();
+  87   1          dht20_read(&dht20);
+  88   1          delay_ms(1000);
+  89   1          vfd_gui_clear();
+  90   1          while (true) {
+  91   2      #ifdef DEV_PLATFROM
+  92   2              if (bUsbOutReady) {
+  93   3                  usb_OUT_done();
+  94   3              }
+  95   2      #endif
+  96   2              //     //====>>>>>>按钮的触发扫描 -> Start
+  97   2              if (btn_arr[0].falg) {
+  98   3                  // P33
+  99   3                  if (btn_arr[0].btn_type == BTN_PRESS) {
+ 100   4                      if (page_display_flag != PAGE_SUB_FLAG_SET_CLOCK) {
+ 101   5                          // 当页面不是时间设置页的时候，切换页面显示内容
+ 102   5                          if (page_display_flag + 1 > PAGE_COUNT) {
+ 103   6                              page_display_flag = 0;
+ 104   6                          } else {
+ 105   6                              page_display_flag++;
+ 106   6                          }
+ 107   5                      } else {
+ 108   5                          if (*set_clock_num_p == 0 || (*set_clock_num_p - 1) < min) {
+ 109   6                              *set_clock_num_p = max;
+ 110   6                          } else {
+ 111   6                              *set_clock_num_p -= 1;
+ 112   6                          }
+ 113   5                      }
+ 114   4                  } else if (btn_arr[0].btn_type == BTN_LONG) {
+ 115   4                  }
+ 116   3                  btn_arr[0].falg = 0;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 3   
+
+ 117   3              }
+ 118   2              if (btn_arr[1].falg) {
+ 119   3                  // P34
+ 120   3                  if (btn_arr[1].btn_type == BTN_PRESS) {
+ 121   4                      if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
+ 122   5                          if ((*set_clock_num_p + 1) > max) {
+ 123   6                              *set_clock_num_p = min;
+ 124   6                          } else {
+ 125   6                              *set_clock_num_p += 1;
+ 126   6                          }
+ 127   5                      } else {
+ 128   5                          // 亮度调整
+ 129   5                          vfd_brightness = (vfd_brightness + 1) % 3;
+ 130   5                      }
+ 131   4                  } else if (btn_arr[1].btn_type == BTN_LONG) {
+ 132   4                      IAP_CONTR = 0x60;  // 软复位到ISP进行下载
+ 133   4                  }
+ 134   3                  btn_arr[1].falg = 0;
+ 135   3              }
+ 136   2              if (btn_arr[2].falg) {
+ 137   3                  // P35
+ 138   3                  if (btn_arr[2].btn_type == BTN_PRESS) {
+ 139   4                      if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
+ 140   5                          set_clock_item++;
+ 141   5                          if (set_clock_item > 3) {
+ 142   6                              set_clock_item = 1;
+ 143   6                          }
+ 144   5                      } else {
+ 145   5                          acg_open = !acg_open;
+ 146   5                      }
+ 147   4                  } else if (btn_arr[2].btn_type == BTN_LONG) {
+ 148   4                      if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
+ 149   5                          page_display_flag = PAGE_FLAG_CLOCK_TIME;
+ 150   5                          save_timeinfo_flag = true;
+ 151   5                          memset(buffer, 0, sizeof(buffer));
+ 152   5                      } else {
+ 153   5                          last_page_display_flag = page_display_flag;
+ 154   5                          page_display_flag = PAGE_SUB_FLAG_SET_CLOCK;
+ 155   5                          set_clock_item = 1;
+ 156   5                          memcpy(&set_timeinfo_cache, &timeinfo, sizeof(timeinfo));
+ 157   5                      }
+ 158   4                  }
+ 159   3                  btn_arr[2].falg = 0;
+ 160   3              }
+ 161   2              //====>>>>>>按钮的触发扫描 -> End
+ 162   2      
+ 163   2              // 动态亮度调整
+ 164   2              vfd_gui_set_blk_level(vfd_brightness_level[vfd_brightness]);
+ 165   2      
+ 166   2              if (page_display_flag == PAGE_FLAG_CLOCK_TIME ||
+ 167   2                  page_display_flag == PAGE_FLAG_CLOCK_DATE) {
+ 168   3                  if (interval_check(time_wait_count, 500)) {
+ 169   4                      page_home();
+ 170   4                      time_wait_count = _systick_ccr;
+ 171   4                  }
+ 172   3              } else if (page_display_flag == PAGE_SUB_FLAG_SET_CLOCK) {
+ 173   3                  // 时间设置
+ 174   3                  if (interval_check(page_wait_count, 300)) {
+ 175   4                      page_sub_set_datetime();
+ 176   4                      page_wait_count = _systick_ccr;
+ 177   4                  }
+ 178   3              } else if (page_display_flag == PAGE_FLAG_SENSOR_TEMP ||
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 4   
+
+ 179   2                         page_display_flag == PAGE_FLAG_SENSOR_HUMIDITY) {
+ 180   3                  // 显示温湿度
+ 181   3                  if (interval_check(time_wait_count, 500)) {
+ 182   4                      page_sensor();
+ 183   4                      time_wait_count = _systick_ccr;
+ 184   4                  }
+ 185   3              }
+ 186   2      
+ 187   2              // 时间保存设定
+ 188   2              if (save_timeinfo_flag) {
+ 189   3                  if (last_page_display_flag == PAGE_FLAG_CLOCK_DATE) {
+ 190   4                      // 设置日期保留时间
+ 191   4                      set_timeinfo_cache.hour = timeinfo.hour;
+ 192   4                      set_timeinfo_cache.min = timeinfo.min;
+ 193   4                      set_timeinfo_cache.sec = timeinfo.sec;
+ 194   4                  } else {
+ 195   4                      // 设置时间保留日期
+ 196   4                      set_timeinfo_cache.year = timeinfo.year;
+ 197   4                      set_timeinfo_cache.month = timeinfo.month;
+ 198   4                      set_timeinfo_cache.day = timeinfo.day;
+ 199   4                      set_timeinfo_cache.week = timeinfo.week;
+ 200   4                  }
+ 201   3                  rx8025_set_time(set_timeinfo_cache.year, set_timeinfo_cache.month,
+ 202   3                                  set_timeinfo_cache.day, set_timeinfo_cache.week - 1,
+ 203   3                                  set_timeinfo_cache.hour, set_timeinfo_cache.min,
+ 204   3                                  set_timeinfo_cache.sec);
+ 205   3                  memset(&set_timeinfo_cache, 0x00, sizeof(set_timeinfo_cache));
+ 206   3                  save_timeinfo_flag = false;
+ 207   3              }
+ 208   2      
+ 209   2              // vfd特效动画
+ 210   2              if (acg_open && page_display_flag != PAGE_SUB_FLAG_SET_CLOCK) {
+ 211   3                  if (interval_check(acg_wait_count, 150)) {
+ 212   4                      vfd_gui_acg_update();
+ 213   4                      acg_wait_count = _systick_ccr;
+ 214   4                  }
+ 215   3              }
+ 216   2      
+ 217   2              // 屏幕保护程序
+ 218   2              if (vfd_saver_open && page_display_flag != PAGE_SUB_FLAG_SET_CLOCK) {
+ 219   3                  if (interval_check(saver_wait_count, SCREEN_SAVER_TIME)) {
+ 220   4                      vfd_gui_display_protect_exec();
+ 221   4                      saver_wait_count = _systick_ccr;
+ 222   4                  }
+ 223   3              }
+ 224   2      
+ 225   2              if (interval_check(dht20_wait_count, 1000)) {
+ 226   3                  dht20_read(&dht20);
+ 227   3                  dht20_wait_count = _systick_ccr;
+ 228   3              }
+ 229   2          }
+ 230   1      }
+ 231          
+ 232          bool interval_check(u32 select, u32 t) {
+ 233   1          return select > _systick_ccr || (_systick_ccr - select) >= t;
+ 234   1      }
+ 235          
+ 236          void page_home() {
+ 237   1          rx8025_time_get(&timeinfo);
+ 238   1          memset(buffer, 0, sizeof(buffer));
+ 239   1          if (page_display_flag == PAGE_FLAG_CLOCK_TIME) {
+ 240   2              point_flag = !point_flag;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 5   
+
+ 241   2              formart_time(&timeinfo, &buffer);
+ 242   2          } else if (page_display_flag == PAGE_FLAG_CLOCK_DATE) {
+ 243   2              point_flag = 1;
+ 244   2              formart_date(&timeinfo, &buffer);
+ 245   2          }
+ 246   1          vfd_gui_set_text(buffer, point_flag, 0);
+ 247   1      }
+ 248          
+ 249          /**
+ 250           * 显示传感器内容
+ 251           */
+ 252          void page_sensor() {
+ 253   1          memset(buffer, 0, sizeof(buffer));
+ 254   1          if (page_display_flag == PAGE_FLAG_SENSOR_TEMP) {
+ 255   2              sprintf(buffer, "T-%.4f", dht20.tmep);
+ 256   2          } else {
+ 257   2              sprintf(buffer, "H-%.3f%%", dht20.humidity);
+ 258   2          }
+ 259   1          vfd_gui_set_text(buffer, 0, 0);
+ 260   1      }
+ 261          
+ 262          /**
+ 263           * 子页面-时间设定
+ 264           */
+ 265          void page_sub_set_datetime() {
+ 266   1          static u8 flicker = 0;  // 闪烁标记
+ 267   1          flicker = !flicker;
+ 268   1          memset(buffer, 0x00, sizeof(buffer));
+ 269   1          if (last_page_display_flag == PAGE_FLAG_CLOCK_TIME) {
+ 270   2              sprintf(buffer, " %02bd %02bd %02bd", set_timeinfo_cache.hour,
+ 271   2                      set_timeinfo_cache.min, set_timeinfo_cache.sec);
+ 272   2              // 设置时间的
+ 273   2              if (set_clock_item == 1) {
+ 274   3                  set_clock_num_p = &set_timeinfo_cache.hour;
+ 275   3                  max = 23;
+ 276   3                  min = 0;
+ 277   3                  if (flicker) {
+ 278   4                      memcpy(buffer + 1, "  ", 2);
+ 279   4                  }
+ 280   3              } else if (set_clock_item == 2) {
+ 281   3                  set_clock_num_p = &set_timeinfo_cache.min;
+ 282   3                  max = 59;
+ 283   3                  min = 0;
+ 284   3                  if (flicker) {
+ 285   4                      memcpy(buffer + 4, "  ", 2);
+ 286   4                  }
+ 287   3              } else if (set_clock_item == 3) {
+ 288   3                  set_clock_num_p = &set_timeinfo_cache.sec;
+ 289   3                  max = 59;
+ 290   3                  min = 0;
+ 291   3                  if (flicker) {
+ 292   4                      memcpy(buffer + 7, "  ", 2);
+ 293   4                  }
+ 294   3              }
+ 295   2          } else if (last_page_display_flag == PAGE_FLAG_CLOCK_DATE) {
+ 296   2              // 设置日期的
+ 297   2              sprintf(buffer, "20%bd%02bd-%02bd", set_timeinfo_cache.year,
+ 298   2                      set_timeinfo_cache.month, set_timeinfo_cache.day);
+ 299   2              if (set_clock_item == 1) {
+ 300   3                  set_clock_num_p = &set_timeinfo_cache.year;
+ 301   3                  max = 99;
+ 302   3                  min = 23;
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 6   
+
+ 303   3                  if (flicker) {
+ 304   4                      memcpy(buffer + 2, "  ", 2);
+ 305   4                  }
+ 306   3              } else if (set_clock_item == 2) {
+ 307   3                  set_clock_num_p = &set_timeinfo_cache.month;
+ 308   3                  max = 12;
+ 309   3                  min = 1;
+ 310   3                  if (flicker) {
+ 311   4                      memcpy(buffer + 4, "  ", 2);
+ 312   4                  }
+ 313   3              } else if (set_clock_item == 3) {
+ 314   3                  set_clock_num_p = &set_timeinfo_cache.day;
+ 315   3                  max = 31;
+ 316   3                  min = 1;
+ 317   3                  if (flicker) {
+ 318   4                      memcpy(buffer + 7, "  ", 2);
+ 319   4                  }
+ 320   3              }
+ 321   2          }
+ 322   1          acg_open = false;
+ 323   1          vfd_gui_set_text(buffer,
+ 324   1                           last_page_display_flag == PAGE_FLAG_CLOCK_DATE ? 0 : 1, 0);
+ 325   1      }
+ 326          
+ 327          void btn_handler(btn_t* btn) {
+ 328   1          if (btn->last_press_time >= BTN_LONG_PRESS_MS &&
+ 329   1              btn->btn_type == BTN_PRESS) {
+ 330   2              btn->last_press_time += BTN_SCAN_MS;
+ 331   2              return;
+ 332   2          }
+ 333   1          if (!btn_gpio_read(btn->gpio)) {
+ 334   2              // 按下触发
+ 335   2              if (btn->btn_type == BTN_PRESS) {
+ 336   3                  btn->last_press_time += BTN_SCAN_MS;
+ 337   3              } else if (btn->btn_type == BTN_RELEASE) {
+ 338   3                  btn->last_press_time = 0;
+ 339   3                  btn->btn_type = BTN_PRESS;
+ 340   3                  // send message
+ 341   3                  btn->falg = 1;
+ 342   3                  return;
+ 343   3              }
+ 344   2              if (btn->btn_type == BTN_PRESS &&
+ 345   2                  btn->last_press_time >= BTN_LONG_PRESS_MS) {
+ 346   3                  // long press event
+ 347   3                  btn->btn_type = BTN_LONG;
+ 348   3                  btn->last_press_time += BTN_SCAN_MS;
+ 349   3                  // send message
+ 350   3                  btn->falg = 1;
+ 351   3                  return;
+ 352   3              }
+ 353   2          } else {
+ 354   2              // release
+ 355   2              btn->btn_type = BTN_RELEASE;
+ 356   2              btn->last_press_time = 0;
+ 357   2          }
+ 358   1      }
+ 359          
+ 360          void btn_scan_isr(void) interrupt 3 {
+ 361   1          // P33- P34+ P35M
+ 362   1          btn_handler(&btn_arr[0]);
+ 363   1          btn_handler(&btn_arr[1]);
+ 364   1          btn_handler(&btn_arr[2]);
+C51 COMPILER V9.60.7.0   MAIN                                                              06/25/2024 16:07:32 PAGE 7   
+
+ 365   1          TF1 = 0;  // 清除TF1标志
+ 366   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1789    ----
+   CONSTANT SIZE    =     64    ----
+   XDATA SIZE       =     31      11
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     61    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -34,6 +34,9 @@
               },
               {
                 "path": "Src/py32f002b_it.c"
+              },
+              {
+                "path": "Src/sys.c"
               }
             ],
             "folders": []
@@ -96,7 +99,7 @@
   "deviceName": null,
   "packDir": null,
   "miscInfo": {
-    "uid": "1139b9f6bbc743afa76d8bffba34bdab"
+    "uid": "de77f2ccd6997ecd84d411683b731d4c"
   },
   "targets": {
     "PY32F002Bx5_Project": {

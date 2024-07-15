@@ -1,0 +1,227 @@
+C51 COMPILER V9.60.7.0   I2C                                                               06/25/2024 16:07:33 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE I2C
+OBJECT MODULE PLACED IN .\Objects\i2c.obj
+COMPILER INVOKED BY: D:\Embedded_drive\Keil_v5\C51\BIN\C51.EXE src\src\i2c.c LARGE OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(
+                    -./src/lib) DEBUG PRINT(.\Listings\i2c.lst) OBJECT(.\Objects\i2c.obj)
+
+line level    source
+
+   1          /*
+   2           * @Description:
+   3           * @Blog: saisaiwa.com
+   4           * @Author: ccy
+   5           * @Date: 2024-06-24 09:14:58
+   6           * @LastEditTime: 2024-06-24 14:22:52
+   7           */
+   8          #include "i2c.h"
+   9          
+  10          #if I2C_HARDWARE
+  11          
+  12          /**
+  13           * 等待命令执行成功
+  14           */
+  15          static void wait_exec() {
+  16   1          u8 cnt = 0;
+  17   1          while (!(I2CMSST & 0x40)) {
+  18   2              if (cnt >= 100) {
+  19   3                  break;
+  20   3              }
+  21   2              cnt++;
+  22   2              delay_ms(1);
+  23   2          }
+  24   1          // 中断位,置零
+  25   1          I2CMSST &= ~0x40;
+  26   1          if (cnt >= 100) {
+  27   2              I2CMSST = 0x00;
+  28   2          }
+  29   1      }
+  30          
+  31          bool i2c_send(u8 byte) {
+  32   1          I2CTXD = byte;
+  33   1          // Send Data And Rece Ack
+  34   1          I2CMSCR = 0x0A;
+  35   1          // 等待数据发送完成
+  36   1          wait_exec();
+  37   1          // 读取ACK并返回
+  38   1          return I2CMSST & 0x02;
+  39   1      }
+  40          
+  41          bool i2c_start(void) {
+  42   1          // 发送Start信号
+  43   1          I2CMSCR = 0x01;
+  44   1          wait_exec();
+  45   1          return true;
+  46   1      }
+  47          
+  48          void i2c_stop(void) {
+  49   1          // 发送STOP信号
+  50   1          I2CMSCR = 0x06;
+  51   1          wait_exec();
+  52   1      }
+  53          
+  54          u8 i2c_read(bool ack) {
+C51 COMPILER V9.60.7.0   I2C                                                               06/25/2024 16:07:33 PAGE 2   
+
+  55   1          u8 rev = 0;
+  56   1          I2CMSCR = 0x04;
+  57   1          wait_exec();
+  58   1          rev = I2CRXD;
+  59   1          // 发ACK命令
+  60   1          I2CMSST = ack ? 0x00 : 0x01;
+  61   1          I2CMSCR = 0x05;
+  62   1          wait_exec();
+  63   1          return rev;
+  64   1      }
+  65          
+  66          #else
+              
+              #define SDA_1 I2C_SDA = 1
+              #define SDA_0 I2C_SDA = 0
+              
+              #define SCL_1 I2C_SCL = 1
+              #define SCL_0 I2C_SCL = 0
+              
+              static void i2c_sda_out() {
+                  P2M0 |= 0x10;
+                  P2M1 |= 0x10;
+              }
+              
+              static void i2c_sda_in() {
+                  P2M1 |= 0x10;
+                  P2M0 &= ~0x10;
+              }
+              
+              void i2c_init() {
+                  // 设置 SDA、SCL开漏输出
+                  P2M0 |= 0x30;
+                  P2M1 |= 0x30;
+                  i2c_sda_out();
+              }
+              
+              bool i2c_start(void) {
+                  i2c_sda_out();
+                  SDA_1;
+                  SCL_1;
+                  delay_us(4);
+                  SDA_0;
+                  delay_us(4);
+                  SCL_0;
+                  return true;
+              }
+              void i2c_stop(void) {
+                  i2c_sda_out();
+                  SCL_0;
+                  SDA_0;
+                  SCL_1;
+                  delay_us(4);
+                  SDA_1;
+                  delay_us(4);
+              }
+              
+              void i2c_nack() {
+                  i2c_sda_out();
+                  SDA_1;
+                  SCL_0;
+                  delay_us(4);
+                  SCL_1;
+C51 COMPILER V9.60.7.0   I2C                                                               06/25/2024 16:07:33 PAGE 3   
+
+                  delay_us(4);
+                  SCL_0;
+              }
+              
+              void i2c_ack() {
+                  i2c_sda_out();
+                  SDA_0;
+                  SCL_0;
+                  delay_us(4);
+                  SCL_1;
+                  delay_us(4);
+                  SCL_0;
+              }
+              
+              u8 i2c_check_ack() {
+                  uint8_t ack = 0, errorRetry = 3;
+                  SDA_1;
+                  delay_us(1);
+                  i2c_sda_in();
+                  delay_us(1);
+                  SCL_1;
+                  delay_us(1);
+                  while (I2C_SDA) {
+                      if (errorRetry <= 0) {
+                          break;
+                      }
+                      delay_us(1);
+                      errorRetry--;
+                  }
+                  if (errorRetry) {
+                      ack = 1;
+                  }
+                  if (!ack) {
+                      i2c_stop();
+                  }
+                  SCL_0;
+                  return ack;
+              }
+              u8 i2c_read(bool ack) {
+                  uint8_t receiveData = 0, i;
+                  i2c_sda_in();
+                  for (i = 0; i < 8; i++) {
+                      SCL_0;
+                      delay_us(4);
+                      SCL_1;
+                      receiveData <<= 1;
+                      if (I2C_SDA) {
+                          receiveData |= 0x01;
+                      }
+                      delay_us(1);
+                  }
+                  SCL_0;
+                  ack ? i2c_ack() : i2c_nack();
+                  return receiveData;
+              }
+              
+              bool i2c_send(u8 buf) {
+                  u8 i;
+                  i2c_sda_out();
+                  SCL_0;
+                  delay_us(4);
+                  for (i = 0; i < 8; i++) {
+C51 COMPILER V9.60.7.0   I2C                                                               06/25/2024 16:07:33 PAGE 4   
+
+                      if (buf & 0x80) {
+                          SDA_1;
+                      } else {
+                          SDA_0;
+                      }
+                      delay_us(4);
+                      SCL_1;
+                      delay_us(4);
+                      SCL_0;
+                      buf <<= 1;
+                  }
+                  return i2c_check_ack();
+              }
+              
+              #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    157    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       3
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

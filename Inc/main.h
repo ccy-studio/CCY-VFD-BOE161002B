@@ -34,6 +34,9 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
+#define u8 uint8_t
+#define u16 uint16_t
+#define u32 uint32_t
 /* Exported variables prototypes ---------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
 void APP_ErrorHandler(void);

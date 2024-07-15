@@ -1,0 +1,145 @@
+C51 COMPILER V9.60.7.0   SYS                                                               06/25/2024 16:07:33 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE SYS
+OBJECT MODULE PLACED IN .\Objects\sys.obj
+COMPILER INVOKED BY: D:\Embedded_drive\Keil_v5\C51\BIN\C51.EXE src\src\sys.c LARGE OMF2 OPTIMIZE(9,SPEED) BROWSE INCDIR(
+                    -./src/lib) DEBUG PRINT(.\Listings\sys.lst) OBJECT(.\Objects\sys.obj)
+
+line level    source
+
+   1          #include "sys.h"
+   2          
+   3          u32 data _systick_ccr = 0;
+   4          
+   5          #ifdef DEV_PLATFROM
+   6          
+   7          char* USER_STCISPCMD = "@STCISP#";
+   8          char* USER_PRODUCTDESC = NULL;
+   9          char* USER_DEVICEDESC = NULL;
+  10          
+  11          void hal_init_uart(void) {
+  12   1          // CDC USB虚拟串口
+  13   1          P3M0 &= 0x03;
+  14   1          P3M1 |= 0x03;
+  15   1          IRC48MCR = 0x80;
+  16   1          while (!(IRC48MCR & 0x01))
+  17   1              ;
+  18   1          USBCLK = 0x00;
+  19   1          USBCON = 0x90;
+  20   1          usb_init();
+  21   1          IE2 |= 0x80;
+  22   1          EA = 1;
+  23   1      }
+  24          #else
+              void hal_init_uart(void) {}
+              #endif
+  27          
+  28          void hal_init_systick() {
+  29   1          // 1毫秒@24Mhz
+  30   1          AUXR |= 0x80;  // 定时器时钟1T模式
+  31   1          TMOD = 0xF3;   // 设置定时器模式 不可屏蔽模式
+  32   1          TL0 = 0x40;    // 设置定时初始值
+  33   1          TH0 = 0xA2;    // 设置定时初始值
+  34   1          TF0 = 0;       // 清除TF0标志
+  35   1          TR0 = 1;       // 定时器0开始计时
+  36   1          ET0 = 1;       // 使能定时器0中断
+  37   1      }
+  38          
+  39          u32 hal_systick_get() {
+  40   1          return _systick_ccr;
+  41   1      }
+  42          
+  43          void timer0_Isr(void) interrupt 1 {
+  44   1          _systick_ccr++;
+  45   1          TF0 = 0;  // 清除TF0标志
+  46   1      }
+  47          
+  48          void hal_init_all_gpio(void) {
+  49   1          P0M0 = 0x0e;
+  50   1          P0M1 = 0x00;
+  51   1          P1M0 = 0x88;
+  52   1          P1M1 = 0x70;
+  53   1          P2M0 = 0x00;
+  54   1          P2M1 = 0x00;
+C51 COMPILER V9.60.7.0   SYS                                                               06/25/2024 16:07:33 PAGE 2   
+
+  55   1      
+  56   1          // I2C内部上拉
+  57   1          P2PU = 0x70;
+  58   1          // Key内部上拉
+  59   1          P1PU = 0x70;
+  60   1      
+  61   1          EA = 1;  // 开总中断
+  62   1      }
+  63          
+  64          void delay_ms(u32 ms) {
+  65   1          unsigned char data i, j;
+  66   1      
+  67   1          do {
+  68   2              _nop_();
+  69   2              i = 32;
+  70   2              j = 40;
+  71   2              do {
+  72   3                  while (--j)
+  73   3                      ;
+  74   3              } while (--i);
+  75   2          } while (--ms);
+  76   1      }
+  77          
+  78          void delay_us(u32 us) {
+  79   1          unsigned char data i;
+  80   1      
+  81   1          do {
+  82   2              i = 6;
+  83   2              while (--i)
+  84   2                  ;
+  85   2          } while (--us);
+  86   1      }
+  87          
+  88          u8 btn_gpio_read(btn_gpio_t gpio) {
+  89   1          if (gpio == BTN_P16) {
+  90   2              return P16;
+  91   2          } else if (gpio == BTN_P15) {
+  92   2              return P15;
+  93   2          } else if (gpio == BTN_P14) {
+  94   2              return P14;
+  95   2          }
+  96   1          return 0;
+  97   1      }
+  98          
+  99          #if I2C_HARDWARE == 0
+              extern void i2c_init();
+              #endif
+ 102          
+ 103          void hal_init_i2c(void) {
+ 104   1      #if I2C_HARDWARE
+ 105   1          // 开启硬件I2C
+ 106   1          P_SW2 = (P_SW2 & ~0x30) | 0x10;  // I2C: I2CSCL(P2.5), I2CSDA(P2.4)
+ 107   1          // I2C总线速度=Fosc/2/(MSSPEED*2+4)
+ 108   1          I2CCFG = 0xCD;  // MSSPEED = 13; 24000000/2/(13*2+4) = 400Khz
+ 109   1          I2CMSST = 0x00;
+ 110   1      #else
+                  i2c_init();
+              #endif
+ 113   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.60.7.0   SYS                                                               06/25/2024 16:07:33 PAGE 3   
+
+   CODE SIZE        =    234    ----
+   CONSTANT SIZE    =      9    ----
+   XDATA SIZE       =      9       8
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

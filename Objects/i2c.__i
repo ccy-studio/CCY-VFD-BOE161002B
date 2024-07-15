@@ -1,0 +1,1 @@
+"src\src\i2c.c" LARGE OMF2 OPTIMIZE (9,SPEED) BROWSE INCDIR(./src/lib) DEBUG PRINT(.\Listings\i2c.lst) OBJECT(.\Objects\i2c.obj)

@@ -1,0 +1,11 @@
+".\Objects\main.obj",
+".\Objects\gui.obj",
+".\Objects\pt6315.obj",
+".\Objects\rx8025.obj",
+".\Objects\sys.obj",
+".\src\src\stc_usb_cdc_8h_xdata.lib",
+".\Objects\i2c.obj",
+".\Objects\dht20.obj" 
+TO ".\Objects\Project" 
+
+PRINT(".\Listings\Project.map") REMOVEUNUSED 

@@ -1,0 +1,142 @@
+C51 COMPILER V9.60.7.0   RX8025                                                            06/25/2024 16:07:33 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE RX8025
+OBJECT MODULE PLACED IN .\Objects\rx8025.obj
+COMPILER INVOKED BY: D:\Embedded_drive\Keil_v5\C51\BIN\C51.EXE src\src\rx8025.c LARGE OMF2 OPTIMIZE(9,SPEED) BROWSE INCD
+                    -IR(./src/lib) DEBUG PRINT(.\Listings\rx8025.lst) OBJECT(.\Objects\rx8025.obj)
+
+line level    source
+
+   1          /*
+   2           * @Description:
+   3           * @Blog: saisaiwa.com
+   4           * @Author: ccy
+   5           * @Date: 2023-09-04 10:53:37
+   6           * @LastEditTime: 2024-06-24 16:24:09
+   7           */
+   8          #include <rx8025.h>
+   9          #include "i2c.h"
+  10          
+  11          #define RX8025T_ADDR_W 0x64
+  12          #define RX8025T_ADDR_R 0x65
+  13          
+  14          void rx8025_read(u8 address, u8* buf, u8 len) {
+  15   1          u8 i;
+  16   1          i2c_start();
+  17   1          i2c_send(RX8025T_ADDR_W);
+  18   1          i2c_send(address);
+  19   1          i2c_start();
+  20   1          i2c_send(RX8025T_ADDR_R);
+  21   1          for (i = 0; i < len; i++) {
+  22   2              buf[i] = i2c_read((i == len - 1) ? 0 : 1);
+  23   2          }
+  24   1          i2c_stop();
+  25   1      }
+  26          
+  27          void rx8025_write(u8 address, u8* buf, u8 len) {
+  28   1          u8 i;
+  29   1          i2c_start();
+  30   1          i2c_send(RX8025T_ADDR_W);
+  31   1          i2c_send(address);
+  32   1          for (i = 0; i < len; i++) {
+  33   2              i2c_send(buf[i]);
+  34   2          }
+  35   1          i2c_stop();
+  36   1      }
+  37          
+  38          u8 toBcd(u8 val) {
+  39   1          return ((val / 10) << 4) | (val % 10);
+  40   1      }
+  41          
+  42          u8 toDec(u8 bcd) {
+  43   1          return ((bcd >> 4) * 10) + (bcd & 0x0F);
+  44   1      }
+  45          
+  46          void rx8025_set_time(u8 year,
+  47                               u8 month,
+  48                               u8 day,
+  49                               u8 week,
+  50                               u8 hour,
+  51                               u8 min,
+  52                               u8 sec) {
+  53   1          u8 command[7];
+  54   1          command[0] = toBcd(sec);
+C51 COMPILER V9.60.7.0   RX8025                                                            06/25/2024 16:07:33 PAGE 2   
+
+  55   1          command[1] = toBcd(min);
+  56   1          command[2] = toBcd(hour);
+  57   1          command[3] = (0x00 >> week) | 0x01;
+  58   1          command[4] = toBcd(day);
+  59   1          command[5] = toBcd(month);
+  60   1          command[6] = toBcd(year);
+  61   1          rx8025_write(0x00, command, 7);
+  62   1      }
+  63          
+  64          void rx8025_time_get(rx8025_timeinfo* timeinfo) {
+  65   1          u8 buf[7] = {0};
+  66   1          rx8025_read(0x00, buf, 7);
+  67   1          timeinfo->sec = toDec(buf[0]);
+  68   1          timeinfo->min = toDec(buf[1]);
+  69   1          timeinfo->hour = toDec(buf[2]);
+  70   1          timeinfo->day = toDec(buf[4]);
+  71   1          timeinfo->month = toDec(buf[5]);
+  72   1          timeinfo->year = toDec(buf[6]);
+  73   1          if (timeinfo->year > 99) {
+  74   2              timeinfo->year = 23;
+  75   2          }
+  76   1          if (timeinfo->month > 12) {
+  77   2              timeinfo->month = 12;
+  78   2          }
+  79   1          timeinfo->week = (-35 + timeinfo->year + (timeinfo->year / 4) +
+  80   1                            (13 * (timeinfo->month + 1) / 5) + timeinfo->day - 1) %
+  81   1                           7;
+  82   1          if (timeinfo->week > 7) {
+  83   2              timeinfo->week = 7;
+  84   2          }
+  85   1          if (timeinfo->week == 0) {
+  86   2              timeinfo->week = 7;
+  87   2          }
+  88   1          if (timeinfo->hour >= 24) {
+  89   2              timeinfo->hour = 0;
+  90   2          }
+  91   1          if (timeinfo->min >= 60) {
+  92   2              timeinfo->min = 0;
+  93   2          }
+  94   1          if (timeinfo->sec >= 60) {
+  95   2              timeinfo->sec = 0;
+  96   2          }
+  97   1      }
+  98          
+  99          void formart_time(rx8025_timeinfo* timeinfo, char* buf) {
+ 100   1          sprintf(buf, "W%bd %02bd%02bd%02bd", timeinfo->week, timeinfo->hour,
+ 101   1                  timeinfo->min, timeinfo->sec);
+ 102   1      }
+ 103          
+ 104          /**
+ 105           *  YYMMdd
+ 106           */
+ 107          void formart_date(rx8025_timeinfo* timeinfo, char* buf) {
+ 108   1          sprintf(buf, "20%bd %02bd%02bd", timeinfo->year, timeinfo->month,
+ 109   1                  timeinfo->day);
+ 110   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    768    ----
+   CONSTANT SIZE    =     45    ----
+   XDATA SIZE       =   ----      48
+C51 COMPILER V9.60.7.0   RX8025                                                            06/25/2024 16:07:33 PAGE 3   
+
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

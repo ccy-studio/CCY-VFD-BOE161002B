@@ -420,6 +420,26 @@
               <FileType>1</FileType>
               <FilePath>..\Src\sys.c</FilePath>
             </File>
+            <File>
+              <FileName>gui.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\gui.c</FilePath>
+            </File>
+            <File>
+              <FileName>pt6315.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\pt6315.c</FilePath>
+            </File>
+            <File>
+              <FileName>rx8025t.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\rx8025t.c</FilePath>
+            </File>
+            <File>
+              <FileName>ws2812.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\ws2812.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -479,6 +499,11 @@
               <FileName>py32f002b_hal_tim_ex.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Drivers\PY32F002B_HAL_Driver\Src\py32f002b_hal_tim_ex.c</FilePath>
+            </File>
+            <File>
+              <FileName>py32f002b_hal_spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\PY32F002B_HAL_Driver\Src\py32f002b_hal_spi.c</FilePath>
             </File>
           </Files>
         </Group>

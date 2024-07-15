@@ -1,0 +1,1 @@
+"src\src\dht20.c" LARGE OMF2 OPTIMIZE (9,SPEED) BROWSE INCDIR(./src/lib) DEBUG PRINT(.\Listings\dht20.lst) OBJECT(.\Objects\dht20.obj)
