@@ -6,29 +6,13 @@ extern I2C_HandleTypeDef i2c;
 #define RX8025T_ADDR_R 0x65
 
 void rx8025_read(u8 address, u8* buf, u8 len) {
-    // u8 i;
-    // i2c_start();
-    // i2c_send(RX8025T_ADDR_W);
-    // i2c_send(address);
-    // i2c_start();
-    // i2c_send(RX8025T_ADDR_R);
-    // for (i = 0; i < len; i++) {
-    //     buf[i] = i2c_read((i == len - 1) ? 0 : 1);
-    // }
-    // i2c_stop();
-    HAL_I2C_Master_Receive(&i2c, address, buf, len, 1000);
+    HAL_I2C_Mem_Read(&i2c, RX8025T_ADDR_R, address, I2C_MEMADD_SIZE_8BIT, buf,
+                     len, 1000);
 }
 
 void rx8025_write(u8 address, u8* buf, u8 len) {
-    // u8 i;
-    // i2c_start();
-    // i2c_send(RX8025T_ADDR_W);
-    // i2c_send(address);
-    // for (i = 0; i < len; i++) {
-    //     i2c_send(buf[i]);
-    // }
-    // i2c_stop();
-    HAL_I2C_Master_Transmit(&i2c, address, buf, len, 1000);
+    HAL_I2C_Mem_Write(&i2c, RX8025T_ADDR_W, address, I2C_MEMADD_SIZE_8BIT, buf,
+                      len, 1000);
 }
 
 u8 toBcd(u8 val) {
@@ -93,7 +77,7 @@ void rx8025_time_get(rx8025_timeinfo* timeinfo) {
 }
 
 void formart_time(rx8025_timeinfo* timeinfo, char* buf) {
-    sprintf(buf, "W%d %02bd%02d%02d", timeinfo->week, timeinfo->hour,
+    sprintf(buf, "W%d %02d%02d%02d", timeinfo->week, timeinfo->hour,
             timeinfo->min, timeinfo->sec);
 }
 

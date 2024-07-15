@@ -24,15 +24,15 @@ void sys_gpio_init() {
     // 初始化按键
     gpio.Pull = GPIO_PULLUP;
     gpio.Mode = GPIO_MODE_IT_FALLING;
-    gpio.Pin = K1_GPIO_PIN & K2_GPIO_PIN & K3_GPIO_PIN;
+    gpio.Pin = K1_GPIO_PIN | K2_GPIO_PIN | K3_GPIO_PIN;
     HAL_GPIO_Init(KEY_GPIO_PORT, &gpio);
 
     // 初始化pt6315
-    gpio.Pull = GPIO_NOPULL;
+    gpio.Pull = GPIO_PULLUP;
     gpio.Mode = GPIO_MODE_OUTPUT_PP;
     gpio.Pin = PT_CLK_GPIO_PIN;
     HAL_GPIO_Init(PT_CLK_GPIO_PORT, &gpio);
-    gpio.Pin = PT_STB_GPIO_PIN & PT_DIN_GPIO_PIN;
+    gpio.Pin = PT_STB_GPIO_PIN | PT_DIN_GPIO_PIN;
     HAL_GPIO_Init(PT_STB_GPIO_PORT, &gpio);
 
     // 初始化RX8025中断
@@ -52,7 +52,7 @@ void sys_gpio_init() {
     // 初始化i2c
     gpio.Pull = GPIO_PULLUP;
     gpio.Mode = GPIO_MODE_AF_OD;
-    gpio.Pin = I2C_SCL_GPIO_PIN & I2C_SDA_GPIO_PIN;
+    gpio.Pin = I2C_SCL_GPIO_PIN | I2C_SDA_GPIO_PIN;
     gpio.Alternate = GPIO_AF6_I2C1;
     gpio.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     HAL_GPIO_Init(I2C_GPIO_PORT, &gpio);
@@ -80,14 +80,17 @@ void sys_init_i2c() {
 
 void sys_init_pwm() {
     __HAL_RCC_TIM1_CLK_ENABLE();
-    // PWM的频率 = 时钟频率 / （自动重装值 + 1）*（预分频值 + 1）
-    //  24000000/100/24=10,000Hz.
+    // PWM的频率 = 时钟频率 / ((自动重装值 + 1)*(预分频值 + 1))
+    // 灯丝 48khz 占空比 15%
+    // 计算结果： 24000000/(100*5) = 48000khz
+    //----->例如： 24000000/100/24=10,000Hz or 24000000/(100*24)
+
     /* TIM1 */
     pwm_tim.Instance = TIM1;
 
     pwm_tim.Init.Period = 100 - 1;  // ARR
 
-    pwm_tim.Init.Prescaler = 24 - 1;  // PSC
+    pwm_tim.Init.Prescaler = 5 - 1;  // PSC
 
     /* ClockDivision = 0  */
     pwm_tim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -125,8 +128,8 @@ void sys_init_pwm() {
     /* Idle state OC1 output low level*/
     sConfig.OCIdleState = TIM_OCIDLESTATE_RESET;
 
-    // 占空比 = CCR / (ARR + 1) (50/(100+1) = 50%)
-    sConfig.Pulse = 50;
+    // 占空比 = CCR / (ARR + 1)  = (15/100 = 15%)
+    sConfig.Pulse = 15;
 
     /* Channel 1 configuration */
     if (HAL_TIM_PWM_ConfigChannel(&pwm_tim, &sConfig, TIM_CHANNEL_4) !=

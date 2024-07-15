@@ -55,7 +55,7 @@ void ws2812_pixel(uint16_t led_no, uint8_t r, uint8_t g, uint8_t b) {
 
 void rgb_update(u8 brightness) {
     memset(ws2812_buffer, 0, WS2812_BUFFER_SIZE);
-    if (brightness > 0) {
+    if (brightness > 1) {
         u8 bi = 0, i = 0;
         for (i = 0; i < WS2812_LED_COUNT; i++) {
             rgb_t* rgb = &cache_arr[i];

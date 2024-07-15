@@ -28,28 +28,41 @@ int main(void) {
     sys_init_pwm();
     sys_init_rgb();
 
-    // 初始化GUI
-    vfd_gui_init();
     // 开启电源
     sys_open_power();
+    // 初始化GUI
+    vfd_gui_init();
+
+    rgb_clear();
 
     /* infinite loop */
-    rx8025_set_time(24, 7, 15, 1, 20, 1, 5);
-    vfd_gui_set_text("Start", 1, 1);
-    HAL_Delay(500);
+    // rx8025_set_time(24, 7, 15, 1, 20, 1, 5);
+    memset(buffer, 0x00, sizeof(buffer));
+    strcpy(buffer, "Start");
+    vfd_gui_set_text(buffer, 0, 1);
+    for (u8 i = 0; i < 4; i++) {
+        HAL_Delay(200);
+        strcat(buffer, ".");
+        vfd_gui_set_text(buffer, 0, 1);
+    }
 
-    rx8025_time_get(&timeinfo);
-    memset(buffer, 0x00, sizeof(buffer));
-    formart_time(&timeinfo, &buffer);
-    vfd_gui_set_text(buffer, 1, 0);
-    HAL_Delay(1000);
-    memset(buffer, 0x00, sizeof(buffer));
-    formart_time(&timeinfo, &buffer);
-    vfd_gui_set_text(buffer, 1, 0);
+    HAL_Delay(300);
+
+    // rx8025_time_get(&timeinfo);
+    // memset(buffer, 0x00, sizeof(buffer));
+    // formart_time(&timeinfo, &buffer);
+    // vfd_gui_set_text(buffer, 1, 0);
+    // HAL_Delay(2000);
+    // memset(buffer, 0x00, sizeof(buffer));
+    // formart_time(&timeinfo, &buffer);
+    // vfd_gui_set_text(buffer, 1, 0);
 
     while (1) {
-        HAL_Delay(2);
-        rgb_frame_update(255, 1);
+        HAL_Delay(500);
+        memset(buffer, 0x00, sizeof(buffer));
+        rx8025_time_get(&timeinfo);
+        formart_time(&timeinfo, &buffer);
+        vfd_gui_set_text(buffer, 1, 0);
     }
 }
 
