@@ -7,6 +7,17 @@ I2C_HandleTypeDef i2c;
 TIM_HandleTypeDef pwm_tim;
 SPI_HandleTypeDef spi;
 
+/**
+ * 按钮定义
+ */
+static btn_t btn_defs[3] = {
+    {K1_GPIO_PIN, BTN_RELEASE, 0, 0},
+    {K2_GPIO_PIN, BTN_RELEASE, 0, 0},
+    {K3_GPIO_PIN, BTN_RELEASE, 0, 0},
+};
+
+btn_t curr_btn;  // 当前按键的状态
+
 void sys_gpio_init() {
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
@@ -23,9 +34,12 @@ void sys_gpio_init() {
 
     // 初始化按键
     gpio.Pull = GPIO_PULLUP;
-    gpio.Mode = GPIO_MODE_IT_FALLING;
+    gpio.Mode = GPIO_MODE_IT_RISING_FALLING;
     gpio.Pin = K1_GPIO_PIN | K2_GPIO_PIN | K3_GPIO_PIN;
     HAL_GPIO_Init(KEY_GPIO_PORT, &gpio);
+    // 开启外部中断NVIC控制器
+    HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+    HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 1);
 
     // 初始化pt6315
     gpio.Pull = GPIO_PULLUP;
@@ -201,5 +215,74 @@ void delay_ms(u32 ms) {
     u32 i;
     for (i = 0; i < ms; i++) {
         delay_us(1000);
+    }
+}
+
+/**
+ * 按键处理函数
+ */
+void sys_btn_handler(btn_t* btn) {
+    // 获取当前运行时间的毫秒数
+    u32 curr = HAL_GetTick();
+    u8 level = HAL_GPIO_ReadPin(KEY_GPIO_PORT, btn->gpio_pin);
+
+    if (btn->btn_type = BTN_RELEASE && !level) {
+        btn->btn_type = BTN_PRESS;
+    }
+
+    if (btn->btn_type = BTN_PRESS && !level && !btn->lock) {
+        // 如果按键状态是按下，且电平依然处于低电平，代表等待释放事件处理
+        btn->last_press_time = curr;
+        // 设置锁定
+        btn->lock = 1;
+    } else if (btn->btn_type = BTN_PRESS && level && btn->lock) {
+        // 按键被释放了
+        btn->lock = 0;
+        uint32_t last_ms = curr - btn->last_press_time;
+        if (last_ms >= BTN_LONG_PRESS_MS) {
+            // 大于等于长按最小间隔认定为长按事件
+            curr_btn.btn_type = BTN_LONG;
+        } else if (last_ms < BTN_LONG_PRESS_MS &&
+                   last_ms >= BTN_SORT_PRESS_MS) {
+            // 小于长按间隔大于等于短按间隔认定短按事件
+            curr_btn.btn_type = BTN_PRESS;
+        } else {
+            // 都不满足则退出
+            goto release;
+        }
+        curr_btn.falg = 1;
+        curr_btn.gpio_pin = btn->gpio_pin;
+    release:
+        btn->btn_type = BTN_RELEASE;
+        btn->last_press_time = 0;
+    }
+}
+
+/**
+ * 释放按键状态
+ */
+void sys_btn_release(btn_t* btn) {
+    btn->btn_type = BTN_RELEASE;
+    btn->falg = 0;
+    btn->gpio_pin = 0;
+}
+
+/**
+ * 按键中断处理回调函数
+ * 不可做耗时操作
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    switch (GPIO_Pin) {
+        case K1_GPIO_PIN:
+            sys_btn_handler(&btn_defs[0]);
+            break;
+        case K2_GPIO_PIN:
+            sys_btn_handler(&btn_defs[1]);
+            break;
+        case K3_GPIO_PIN:
+            sys_btn_handler(&btn_defs[2]);
+            break;
+        default:
+            break;
     }
 }

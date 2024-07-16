@@ -1,0 +1,49 @@
+/*
+ * @Description:
+ * @Blog: saisaiwa.com
+ * @Author: ccy
+ * @Date: 2024-07-16 17:18:01
+ * @LastEditTime: 2024-07-16 17:55:33
+ */
+#include "widget.h"
+
+static const char* types[3] = {"Type-1", "Type-2", "Type-3"};
+static u8 idx = 0;
+
+static void view_handler(void* params) {
+    memset(vfd_buffer, 0, size_t(vfd_buffer));
+    memcpy(vfd_buffer, types[idx], strlen(types[idx]));
+    vfd_gui_set_text(vfd_buffer, 0, 0);
+}
+
+/**
+ * 处理按键的事件
+ */
+static void btn_click_event(btn_t* event) {
+    if (event->btn_type == BTN_PRESS) {
+        if (event->gpio_pin == K1_GPIO_PIN) {
+            if (idx != 0) {
+                idx--;
+            } else {
+                idx = sizeof(types) / sizeof(types[0]) - 1;
+            }
+        }
+        if (event->gpio_pin == K2_GPIO_PIN) {
+            if (++idx >= (sizeof(types) / sizeof(types[0]))) {
+                idx = 0;
+            }
+        }
+
+        if (event->gpio_pin == K3_GPIO_PIN) {
+        }
+    } else if (event->btn_type == BTN_LONG) {
+        if (event->gpio_pin == K3_GPIO_PIN) {
+            // 退出到设置页
+            replace_widget(WIDGET_NAME_SETTING, NULL);
+        }
+    }
+}
+
+widget_t w_vfd_setting = {.name = WIDGET_NAME_SETTING_RGB,
+                          .handler = view_handler,
+                          .btn_callback = btn_click_event};

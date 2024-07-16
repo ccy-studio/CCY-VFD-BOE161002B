@@ -6,8 +6,10 @@
 #include "ws2812.h"
 /* Private define ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-u8 buffer[10];  // vfd显示缓存
+static u32 last_ms_rgb, last_ms_vfd_main, last_ms_date_setting;
+static u8 buffer[10];  // vfd显示缓存
 static rx8025_timeinfo timeinfo;
+extern btn_t curr_btn;
 /* Private user code ---------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -36,7 +38,6 @@ int main(void) {
     rgb_clear();
 
     /* infinite loop */
-    // rx8025_set_time(24, 7, 15, 1, 20, 1, 5);
     memset(buffer, 0x00, sizeof(buffer));
     strcpy(buffer, "Start");
     vfd_gui_set_text(buffer, 0, 1);
@@ -48,23 +49,39 @@ int main(void) {
 
     HAL_Delay(300);
 
-    // rx8025_time_get(&timeinfo);
-    // memset(buffer, 0x00, sizeof(buffer));
-    // formart_time(&timeinfo, &buffer);
-    // vfd_gui_set_text(buffer, 1, 0);
-    // HAL_Delay(2000);
-    // memset(buffer, 0x00, sizeof(buffer));
-    // formart_time(&timeinfo, &buffer);
-    // vfd_gui_set_text(buffer, 1, 0);
-
     while (1) {
-        HAL_Delay(500);
-        memset(buffer, 0x00, sizeof(buffer));
-        rx8025_time_get(&timeinfo);
-        formart_time(&timeinfo, &buffer);
-        vfd_gui_set_text(buffer, 1, 0);
+        // HAL_Delay(500);
+        // memset(buffer, 0x00, sizeof(buffer));
+        // rx8025_time_get(&timeinfo);
+        // formart_time(&timeinfo, &buffer);
+        // vfd_gui_set_text(buffer, 1, 0);
+        // 按键扫描
+        if (curr_btn.falg) {
+            if (curr_btn.gpio_pin == K1_GPIO_PIN) {
+            } else if (curr_btn.gpio_pin == K2_GPIO_PIN) {
+            } else if (curr_btn.gpio_pin == K3_GPIO_PIN) {
+            }
+            sys_btn_release(&curr_btn);
+        }
     }
 }
+
+/**
+ * -----------------------------业务逻辑-----------------------------
+ */
+
+static void logic_vfd_refresh() {}
+
+static void logic_rgb_refresh() {
+    if ((HAL_GetTick() - last_ms_rgb) >= 2) {
+        rgb_frame_update(255, 1);
+        last_ms_rgb = HAL_GetTick();
+    }
+}
+
+/**
+ * -----------------------------系统初始化-----------------------------
+ */
 
 /**
  * @brief  System clock configuration function
@@ -115,7 +132,10 @@ static void APP_SystemClockConfig(void) {
  * @retval None
  */
 void APP_ErrorHandler(void) {
+    vfd_gui_clear();
     while (1) {
+        HAL_Delay(1000);
+        vfd_gui_set_text("Error", 0, 0);
     }
 }
 

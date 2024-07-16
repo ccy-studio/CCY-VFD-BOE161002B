@@ -1,9 +1,9 @@
 /*
- * @Description: 
+ * @Description:
  * @Blog: saisaiwa.com
  * @Author: ccy
  * @Date: 2024-07-15 10:16:01
- * @LastEditTime: 2024-07-15 15:55:28
+ * @LastEditTime: 2024-07-16 10:35:03
  */
 #ifndef __SYSH
 #define __SYSH
@@ -12,36 +12,26 @@
 extern "C" {
 #endif
 
-#include "main.h"
 #include <string.h>
+#include "main.h"
 
-#define VFD_EN_GPIO_PORT GPIOC
-#define VFD_EN_GPIO_PIN GPIO_PIN_1
+typedef enum {
+    BTN_PRESS = 0,
+    BTN_RELEASE,
+    BTN_LONG,
+} btn_state_t;
 
-#define RGB_GPIO_PORT GPIOB
-#define RGB_GPIO_PIN GPIO_PIN_7
+typedef struct {
+    uint16_t gpio_pin;
+    btn_state_t btn_type;
+    u32 last_press_time;
+    u8 lock;  // 锁定状态
+    u8 falg;  // 是否被处理
+} btn_t;
 
-#define KEY_GPIO_PORT GPIOA
-#define K1_GPIO_PIN GPIO_PIN_5
-#define K2_GPIO_PIN GPIO_PIN_6
-#define K3_GPIO_PIN GPIO_PIN_7
-
-#define PT_STB_GPIO_PORT GPIOA
-#define PT_STB_GPIO_PIN GPIO_PIN_1
-#define PT_DIN_GPIO_PORT GPIOA
-#define PT_DIN_GPIO_PIN GPIO_PIN_0
-#define PT_CLK_GPIO_PORT GPIOB
-#define PT_CLK_GPIO_PIN GPIO_PIN_0
-
-#define PWM_GPIO_PORT GPIOB
-#define PWM_GPIO_PIN GPIO_PIN_1
-
-#define RX8025_INT_GPIO_PORT GPIOB
-#define RX8025_INT_GPIO_PIN GPIO_PIN_2
-
-#define I2C_GPIO_PORT GPIOB
-#define I2C_SCL_GPIO_PIN GPIO_PIN_3
-#define I2C_SDA_GPIO_PIN GPIO_PIN_4
+/* 按键扫描配置 */
+#define BTN_LONG_PRESS_MS 2000  // 长按间隔时间
+#define BTN_SORT_PRESS_MS 500   // 短按间隔时间
 
 void sys_gpio_init();
 void sys_init_i2c();
@@ -49,6 +39,7 @@ void sys_init_pwm();
 void sys_init_rgb();
 void sys_open_power();
 void sys_close_power();
+void sys_btn_release(btn_t* btn);
 void delay_us(u32 us);
 void delay_ms(u32 ms);
 
