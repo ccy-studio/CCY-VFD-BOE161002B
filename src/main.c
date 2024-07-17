@@ -1,15 +1,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "gui.h"
-#include "rx8025t.h"
 #include "sys.h"
+#include "widget.h"
 #include "ws2812.h"
 /* Private define ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-static u32 last_ms_rgb, last_ms_vfd_main, last_ms_date_setting;
-static u8 buffer[10];  // vfd显示缓存
-static rx8025_timeinfo timeinfo;
 extern btn_t curr_btn;
+extern u8 rgb_light;
+extern u8 rgb_type;
+extern u8 acg_open;
+u32 rgb_exec_time;
+u32 acg_exec_time;
 /* Private user code ---------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -34,50 +35,52 @@ int main(void) {
     sys_open_power();
     // 初始化GUI
     vfd_gui_init();
-
+    // 清除关闭rgb灯光
     rgb_clear();
+    // 初始化组件
+    widget_init();
 
     /* infinite loop */
-    memset(buffer, 0x00, sizeof(buffer));
-    strcpy(buffer, "Start");
-    vfd_gui_set_text(buffer, 0, 1);
+    memset(vfd_buffer, 0x00, sizeof(vfd_buffer));
+    strcpy(vfd_buffer, "Start");
+    vfd_gui_set_text(vfd_buffer, 0, 1);
     for (u8 i = 0; i < 4; i++) {
         HAL_Delay(200);
-        strcat(buffer, ".");
-        vfd_gui_set_text(buffer, 0, 1);
+        strcat(vfd_buffer, ".");
+        vfd_gui_set_text(vfd_buffer, 0, 1);
     }
 
     HAL_Delay(300);
 
     while (1) {
-        // HAL_Delay(500);
-        // memset(buffer, 0x00, sizeof(buffer));
-        // rx8025_time_get(&timeinfo);
-        // formart_time(&timeinfo, &buffer);
-        // vfd_gui_set_text(buffer, 1, 0);
         // 按键扫描
         if (curr_btn.falg) {
-            if (curr_btn.gpio_pin == K1_GPIO_PIN) {
-            } else if (curr_btn.gpio_pin == K2_GPIO_PIN) {
-            } else if (curr_btn.gpio_pin == K3_GPIO_PIN) {
-            }
+            widget_send_btn_event(&curr_btn);
             sys_btn_release(&curr_btn);
         }
+        // RGB刷新逻辑
+        if (rgb_type <= 2) {
+            if (HAL_GetTick() - rgb_exec_time > 2) {
+                rgb_frame_update(rgb_light, rgb_type);
+                rgb_exec_time = HAL_GetTick();
+            }
+        }
+
+        // ACG动画执行
+        if (acg_open) {
+            if (HAL_GetTick() - acg_exec_time > 100) {
+                vfd_gui_acg_update();
+                acg_exec_time = HAL_GetTick();
+            }
+        }
+        // 组件刷新
+        widget_refresh(NULL);
     }
 }
 
 /**
  * -----------------------------业务逻辑-----------------------------
  */
-
-static void logic_vfd_refresh() {}
-
-static void logic_rgb_refresh() {
-    if ((HAL_GetTick() - last_ms_rgb) >= 2) {
-        rgb_frame_update(255, 1);
-        last_ms_rgb = HAL_GetTick();
-    }
-}
 
 /**
  * -----------------------------系统初始化-----------------------------

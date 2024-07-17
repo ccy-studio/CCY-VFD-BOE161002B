@@ -1,17 +1,36 @@
+/*
+ * @Description:
+ * @Blog: saisaiwa.com
+ * @Author: ccy
+ * @Date: 2024-07-16 11:39:04
+ * @LastEditTime: 2024-07-17 10:52:47
+ */
 #include "widget.h"
 
-#define WIDGET_SIZE 3
+#define WIDGET_SIZE 7
 
 rx8025_timeinfo timeinfo;
-u8 vfd_buffer[10];  // vfd显示缓存
+char vfd_buffer[10];  // vfd显示缓存
+u32 last_time;
 
-widget_t widget_defs[WIDGET_SIZE] = {};
 widget_t* curr_widget = NULL;
+
+// 定义初始化组件
+extern widget_t w_vfd_time_def;
+extern widget_t w_vfd_date_def;
+extern widget_t w_vfd_setting;
+extern widget_t w_set_rgb;
+extern widget_t w_set_rgb_light;
+extern widget_t w_vfd_set_date;
+extern widget_t w_vfd_set_time;
+widget_t* widget_defs[WIDGET_SIZE] = {
+    &w_vfd_time_def,  &w_vfd_date_def, &w_vfd_setting, &w_set_rgb,
+    &w_set_rgb_light, &w_vfd_set_date, &w_vfd_set_time};
 
 widget_t* find_widget(u8 name) {
     for (u8 i = 0; i < WIDGET_SIZE; i++) {
-        if (widget_defs[i].name == name) {
-            return &widget_defs[i];
+        if (widget_defs[i]->name == name) {
+            return widget_defs[i];
         }
     }
     return NULL;
@@ -36,6 +55,7 @@ void replace_widget(u8 name, void* params) {
         wd->call_show(params);
     }
     curr_widget = wd;
+    last_time = 0;
 }
 
 void widget_init() {
@@ -47,7 +67,11 @@ void widget_init() {
  */
 void widget_refresh(void* params) {
     if (curr_widget != NULL && curr_widget->handler != NULL) {
-        curr_widget->handler(params);
+        // 时间执行的判断
+        if ((HAL_GetTick() - last_time) > curr_widget->exec_time) {
+            curr_widget->handler(params);
+            last_time = HAL_GetTick();
+        }
     }
 }
 

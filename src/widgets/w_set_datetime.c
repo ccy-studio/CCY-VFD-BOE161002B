@@ -17,7 +17,7 @@ static u8 set_clock_item = 1;  // 记录时间设置的时间项
 static u8 flicker = 0;         // 闪烁标记
 
 static void init() {
-    memset(vfd_buffer, 0, size_t(vfd_buffer));
+    memset(vfd_buffer, 0, sizeof(vfd_buffer));
     flicker = !flicker;
 }
 
@@ -142,11 +142,13 @@ static void on_show(void* params) {
 }
 
 widget_t w_vfd_set_date = {.name = WIDGET_NAME_SETTING_DATE,
+                           .exec_time = 300,
                            .handler = view_date_handler,
                            .btn_callback = btn_click_event,
                            .call_show = on_show};
 
 widget_t w_vfd_set_time = {.name = WIDGET_NAME_SETTING_TIME,
+                           .exec_time = 300,
                            .handler = view_time_handler,
                            .btn_callback = btn_click_event,
                            .call_show = on_show};

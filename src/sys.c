@@ -226,16 +226,16 @@ void sys_btn_handler(btn_t* btn) {
     u32 curr = HAL_GetTick();
     u8 level = HAL_GPIO_ReadPin(KEY_GPIO_PORT, btn->gpio_pin);
 
-    if (btn->btn_type = BTN_RELEASE && !level) {
+    if (btn->btn_type == BTN_RELEASE && !level) {
         btn->btn_type = BTN_PRESS;
     }
 
-    if (btn->btn_type = BTN_PRESS && !level && !btn->lock) {
+    if (btn->btn_type == BTN_PRESS && !level && !btn->lock) {
         // 如果按键状态是按下，且电平依然处于低电平，代表等待释放事件处理
         btn->last_press_time = curr;
         // 设置锁定
         btn->lock = 1;
-    } else if (btn->btn_type = BTN_PRESS && level && btn->lock) {
+    } else if (btn->btn_type == BTN_PRESS && level && btn->lock) {
         // 按键被释放了
         btn->lock = 0;
         uint32_t last_ms = curr - btn->last_press_time;

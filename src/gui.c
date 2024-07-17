@@ -198,7 +198,7 @@ void vfd_gui_display_protect_exec() {
         memset(buf, 0x00, sizeof(buf));
         for (j = 0; j < 10; j++) {
             u8 rn = (hal_systick_get() << i) % 10;
-            sprintf((&buf) + j, "%d", rn);
+            sprintf(buf + j, "%d", rn);
             delay_ms(1);
         }
         vfd_gui_set_text(buf, 0, 0);

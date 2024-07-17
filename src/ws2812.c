@@ -86,8 +86,10 @@ void rgb_frame_update(u8 brightness_val, u8 type) {
         rgb = hsv2rgb_rainbow(hsv);
     } else if (type == 1) {
         rgb = hsv2rgb_spectrum(hsv);
-    } else {
+    } else if (type == 2) {
         rgb = rgb_heat_color(hsv.h);
+    } else {
+        return;
     }
 
     rgb_set_color(0, rgb.r, rgb.g, rgb.b);

@@ -508,6 +508,41 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Application/User/Widget</GroupName>
+          <Files>
+            <File>
+              <FileName>widget.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\widget.c</FilePath>
+            </File>
+            <File>
+              <FileName>w_set_datetime.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\widgets\w_set_datetime.c</FilePath>
+            </File>
+            <File>
+              <FileName>w_set_rgb.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\widgets\w_set_rgb.c</FilePath>
+            </File>
+            <File>
+              <FileName>w_set_rgb_light.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\widgets\w_set_rgb_light.c</FilePath>
+            </File>
+            <File>
+              <FileName>w_setting.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\widgets\w_setting.c</FilePath>
+            </File>
+            <File>
+              <FileName>w_vfd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\widgets\w_vfd.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
       </Groups>

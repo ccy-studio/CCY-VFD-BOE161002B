@@ -1,7 +1,7 @@
 #include "widget.h"
 
 typedef struct {
-    const char title[7];
+    const char title[8];
     u8 open_widget_name;
     u8 active;
 } menu_item_t;
@@ -16,7 +16,7 @@ static const menu_item_t menu_items[4] = {
 static u8 idx = 0;
 
 static void menu_handler(void* params) {
-    memset(vfd_buffer, 0, size_t(vfd_buffer));
+    memset(vfd_buffer, 0, sizeof(vfd_buffer));
     memcpy(vfd_buffer, menu_items[idx].title, sizeof(menu_items[idx].title));
     vfd_gui_set_text(vfd_buffer, 0, 0);
 }
@@ -52,5 +52,6 @@ static void btn_click_event(btn_t* event) {
 }
 
 widget_t w_vfd_setting = {.name = WIDGET_NAME_SETTING,
+                          .exec_time = 100,
                           .handler = menu_handler,
                           .btn_callback = btn_click_event};

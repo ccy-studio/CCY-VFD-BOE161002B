@@ -34,6 +34,7 @@ typedef void (*widget_btn_callback)(btn_t* event);
 
 typedef struct {
     u8 name;
+    u32 exec_time; //执行间隔ms
     widget_view_handler handler;
     widget_view_handler call_show;
     widget_view_handler call_hide;
@@ -41,7 +42,7 @@ typedef struct {
 } widget_t;
 
 extern widget_t* curr_widget;
-extern u8 vfd_buffer[10];
+extern char vfd_buffer[10];
 
 void widget_init();
 void replace_widget(u8 name, void* params);
