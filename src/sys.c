@@ -11,9 +11,9 @@ SPI_HandleTypeDef spi;
  * 按钮定义
  */
 static btn_t btn_defs[3] = {
-    {K1_GPIO_PIN, BTN_RELEASE, 0, 0},
-    {K2_GPIO_PIN, BTN_RELEASE, 0, 0},
-    {K3_GPIO_PIN, BTN_RELEASE, 0, 0},
+    {K1_GPIO_PIN, BTN_RELEASE, 0, 0, 0},
+    {K2_GPIO_PIN, BTN_RELEASE, 0, 0, 0},
+    {K3_GPIO_PIN, BTN_RELEASE, 0, 0, 0},
 };
 
 btn_t curr_btn;  // 当前按键的状态
@@ -39,7 +39,7 @@ void sys_gpio_init() {
     HAL_GPIO_Init(KEY_GPIO_PORT, &gpio);
     // 开启外部中断NVIC控制器
     HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
-    HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 1);
+    HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 0);
 
     // 初始化pt6315
     gpio.Pull = GPIO_PULLUP;
@@ -80,16 +80,15 @@ void sys_gpio_init() {
 }
 void sys_init_i2c() {
     __HAL_RCC_I2C_CLK_ENABLE();
+    __HAL_RCC_I2C_FORCE_RESET();
+    __HAL_RCC_I2C_RELEASE_RESET();
     i2c.Instance = I2C1;
-    // 设置时钟频率300Khz
-    i2c.Init.ClockSpeed = 300000;
+    // 设置时钟频率400Khz
+    i2c.Init.ClockSpeed = 400000;
     i2c.Init.DutyCycle = I2C_DUTYCYCLE_16_9;
     if (HAL_I2C_Init(&i2c) != HAL_OK) {
         APP_ErrorHandler();
     }
-
-    __HAL_RCC_I2C_FORCE_RESET();
-    __HAL_RCC_I2C_RELEASE_RESET();
 }
 
 void sys_init_pwm() {
@@ -154,6 +153,9 @@ void sys_init_pwm() {
 
 void sys_init_rgb() {
     __HAL_RCC_SPI1_CLK_ENABLE();
+    __HAL_RCC_SPI1_FORCE_RESET();
+    __HAL_RCC_SPI1_RELEASE_RESET();
+
     spi.Instance = SPI1;
     spi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
     spi.Init.Direction = SPI_DIRECTION_2LINES;
@@ -163,10 +165,6 @@ void sys_init_rgb() {
     spi.Init.FirstBit = SPI_FIRSTBIT_MSB;
     spi.Init.NSS = SPI_NSS_HARD_INPUT;
     spi.Init.Mode = SPI_MODE_MASTER;
-
-    __HAL_RCC_SPI1_FORCE_RESET();
-    __HAL_RCC_SPI1_RELEASE_RESET();
-
     /* SPI initialization */
     if (HAL_SPI_Init(&spi) != HAL_OK) {
         APP_ErrorHandler();
@@ -225,6 +223,13 @@ void sys_btn_handler(btn_t* btn) {
     // 获取当前运行时间的毫秒数
     u32 curr = HAL_GetTick();
     u8 level = HAL_GPIO_ReadPin(KEY_GPIO_PORT, btn->gpio_pin);
+    // curr_btn.falg = 1;
+    // curr_btn.gpio_pin = btn->gpio_pin;
+    // if (level) {
+    //     curr_btn.btn_type = BTN_RELEASE;
+    // } else {
+    //     curr_btn.btn_type = BTN_PRESS;
+    // }
 
     if (btn->btn_type == BTN_RELEASE && !level) {
         btn->btn_type = BTN_PRESS;
@@ -238,6 +243,7 @@ void sys_btn_handler(btn_t* btn) {
     } else if (btn->btn_type == BTN_PRESS && level && btn->lock) {
         // 按键被释放了
         btn->lock = 0;
+        btn->btn_type = BTN_RELEASE;
         uint32_t last_ms = curr - btn->last_press_time;
         if (last_ms >= BTN_LONG_PRESS_MS) {
             // 大于等于长按最小间隔认定为长按事件
@@ -248,13 +254,10 @@ void sys_btn_handler(btn_t* btn) {
             curr_btn.btn_type = BTN_PRESS;
         } else {
             // 都不满足则退出
-            goto release;
+            return;
         }
         curr_btn.falg = 1;
         curr_btn.gpio_pin = btn->gpio_pin;
-    release:
-        btn->btn_type = BTN_RELEASE;
-        btn->last_press_time = 0;
     }
 }
 

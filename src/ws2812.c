@@ -75,7 +75,7 @@ void rgb_clear() {
         rgb->g = 0;
         rgb->r = 0;
     }
-    rgb_update(0);
+    rgb_update(0xff);
 }
 
 void rgb_frame_update(u8 brightness_val, u8 type) {

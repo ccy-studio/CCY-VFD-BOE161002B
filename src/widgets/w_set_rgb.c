@@ -20,6 +20,13 @@ static void view_handler(void* params) {
     vfd_gui_set_text(vfd_buffer, 0, 0);
 }
 
+static void set_rgb() {
+    rgb_type = idx;
+    if (idx == (sizeof(types) / sizeof(types[0]) - 1)) {
+        rgb_clear();
+    }
+}
+
 /**
  * 处理按键的事件
  */
@@ -31,19 +38,17 @@ static void btn_click_event(btn_t* event) {
             } else {
                 idx = sizeof(types) / sizeof(types[0]) - 1;
             }
+            set_rgb();
         }
         if (event->gpio_pin == K2_GPIO_PIN) {
             if (++idx >= (sizeof(types) / sizeof(types[0]))) {
                 idx = 0;
             }
+            set_rgb();
         }
 
         if (event->gpio_pin == K3_GPIO_PIN) {
-            // 确认键切换RGB的显示
-            rgb_type = idx;
-            if (idx == (sizeof(types) / sizeof(types[0]) - 1)) {
-                rgb_clear();
-            }
+            replace_widget(WIDGET_NAME_SETTING, NULL);
         }
     } else if (event->btn_type == BTN_LONG) {
         if (event->gpio_pin == K3_GPIO_PIN) {

@@ -37,7 +37,7 @@ static void time_handler(void* params) {
 static void date_handler(void* params) {
     init();
     formart_date(&timeinfo, vfd_buffer);
-    vfd_gui_set_text(vfd_buffer, 0, 0);
+    vfd_gui_set_text(vfd_buffer, 1, 1);
 }
 
 static void hide_call(void* params) {
@@ -76,13 +76,13 @@ static void btn_click_event(btn_t* event) {
 }
 
 widget_t w_vfd_time_def = {.name = WIDGET_NAME_VFD_TIME,
-                           .exec_time = 500,
+                           .exec_time = 350,
                            .handler = time_handler,
                            .call_hide = hide_call,
                            .btn_callback = btn_click_event};
 
 widget_t w_vfd_date_def = {.name = WIDGET_NAME_VFD_DATE,
-                           .exec_time = 500,
+                           .exec_time = 1000,
                            .handler = date_handler,
                            .call_hide = hide_call,
                            .btn_callback = btn_click_event};

@@ -67,8 +67,8 @@ int main(void) {
         }
 
         // ACG动画执行
-        if (acg_open) {
-            if (HAL_GetTick() - acg_exec_time > 100) {
+        if (acg_open && curr_widget->name == WIDGET_NAME_VFD_TIME) {
+            if (HAL_GetTick() - acg_exec_time > 120) {
                 vfd_gui_acg_update();
                 acg_exec_time = HAL_GetTick();
             }

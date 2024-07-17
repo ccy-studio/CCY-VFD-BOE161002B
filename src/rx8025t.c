@@ -7,12 +7,12 @@ extern I2C_HandleTypeDef i2c;
 
 void rx8025_read(u8 address, u8* buf, u8 len) {
     HAL_I2C_Mem_Read(&i2c, RX8025T_ADDR_R, address, I2C_MEMADD_SIZE_8BIT, buf,
-                     len, 1000);
+                     len, 300);
 }
 
 void rx8025_write(u8 address, u8* buf, u8 len) {
     HAL_I2C_Mem_Write(&i2c, RX8025T_ADDR_W, address, I2C_MEMADD_SIZE_8BIT, buf,
-                      len, 1000);
+                      len, 500);
 }
 
 u8 toBcd(u8 val) {

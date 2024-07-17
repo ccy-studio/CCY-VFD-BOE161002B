@@ -16,8 +16,8 @@ extern "C" {
 #include "main.h"
 
 typedef enum {
-    BTN_PRESS = 0,
-    BTN_RELEASE,
+    BTN_RELEASE = 0,
+    BTN_PRESS,
     BTN_LONG,
 } btn_state_t;
 
@@ -30,8 +30,8 @@ typedef struct {
 } btn_t;
 
 /* 按键扫描配置 */
-#define BTN_LONG_PRESS_MS 2000  // 长按间隔时间
-#define BTN_SORT_PRESS_MS 500   // 短按间隔时间
+#define BTN_LONG_PRESS_MS 1000  // 长按间隔时间
+#define BTN_SORT_PRESS_MS 1   // 短按间隔时间
 
 void sys_gpio_init();
 void sys_init_i2c();
